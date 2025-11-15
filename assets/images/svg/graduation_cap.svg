@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1024" height="1024" fill="#19BCBC"/>
+  <path d="M512 200L812 350L512 500L212 350L512 200Z" fill="white"/>
+  <path d="M362 400V600L512 675L662 600V400L512 475L362 400Z" fill="white"/>
+  <path d="M812 350V550L762 575V375L812 350Z" fill="white"/>
+</svg>

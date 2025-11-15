@@ -1,0 +1,24 @@
+.auth_field {
+  position: relative;
+  margin-bottom: 16px;
+}
+
+.auth_field input {
+  width: 100%;
+  padding: 12px 16px 12px 48px;
+  border: 1px solid #E0E0E0;
+  border-radius: 8px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 14px;
+  color: #1E1E1E;
+}
+
+.auth_field img {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  opacity: 0.6;
+}
