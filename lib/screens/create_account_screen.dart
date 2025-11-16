@@ -49,7 +49,8 @@ class _CreateAccountFormState extends State<CreateAccountForm> {
   final _confirmPasswordController = TextEditingController();
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
-
+  bool _isLoading = false;
+  
   @override
   void dispose() {
     _nameController.dispose();
@@ -60,41 +61,41 @@ class _CreateAccountFormState extends State<CreateAccountForm> {
   }
 
   void _handleCreateAccount(BuildContext context) async {
-    if (_formKey.currentState!.validate()) {
-      if (_passwordController.text != _confirmPasswordController.text) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Passwords do not match')),
+    if (!_formKey.currentState!.validate()) return;
+
+    if (_passwordController.text != _confirmPasswordController.text) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Passwords do not match')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      final success = await auth.createAccount(
+        _nameController.text.trim(),
+        _emailController.text.trim(),
+        _passwordController.text,
+      );
+
+      if (!context.mounted) return;
+
+      if (success) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const HomeScreenV3()),
         );
         return;
       }
 
-      try {
-        final auth = Provider.of<AuthProvider>(context, listen: false);
-        final success = await auth.createAccount(
-          _nameController.text,
-          _emailController.text,
-          _passwordController.text,
-        );
-
-        if (!context.mounted) return;
-
-        if (success) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => const HomeScreenV3()),
-          );
-          return;
-        }
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to create account')),
-        );
-      } catch (e) {
-        if (!context.mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e')),
-        );
-      }
+      final err = auth.lastError ?? 'Failed to create account';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err)));
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -243,7 +244,7 @@ class _CreateAccountFormState extends State<CreateAccountForm> {
           ),
           SizedBox(height: AppTheme.scaledSize(context, 0, 32).height),
           ElevatedButton(
-            onPressed: () => _handleCreateAccount(context),
+            onPressed: _isLoading ? null : () => _handleCreateAccount(context),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primary,
               padding: AppTheme.scaledPadding(context, vertical: 16),
@@ -252,13 +253,22 @@ class _CreateAccountFormState extends State<CreateAccountForm> {
               ),
               minimumSize: Size(double.infinity, AppTheme.scaledSize(context, 0, 48).height),
             ),
-            child: Text(
-              'Create Account',
-              style: AppTheme.bodyText(context).copyWith(
-                color: Colors.white,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            child: _isLoading
+                ? SizedBox(
+                    height: 20,
+                    width: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : Text(
+                    'Create Account',
+                    style: AppTheme.bodyText(context).copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
           ),
           SizedBox(height: AppTheme.scaledSize(context, 0, 20).height),
           TextButton(

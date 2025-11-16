@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
+// 🔹 Firebase imports
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+
 import 'screens/splash_screen.dart';
 import 'screens/ai_chat_screen.dart';
 import 'screens/flashcards_screen.dart';
@@ -21,9 +26,18 @@ import 'theme/app_theme.dart';
 import 'screens/community_create_post.dart';
 import 'screens/community_trending.dart';
 
-void main() {
+Future<void> main() async {
+  // Needed before any async + Firebase calls
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 🔹 Initialize Firebase using your generated options
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  // Your UI setup
   AppTheme.setSystemUI();
+
   runApp(const MyApp());
 }
 
@@ -65,34 +79,53 @@ class MyApp extends StatelessWidget {
                     builder: (context) => const FlashcardsScreen(),
                   );
                 case '/notes':
-                  return MaterialPageRoute(builder: (context) => const NotesScreen());
+                  return MaterialPageRoute(
+                    builder: (context) => const NotesScreen(),
+                  );
                 case '/dailyQuiz':
-                  return MaterialPageRoute(builder: (context) => const DailyQuizScreen());
+                  return MaterialPageRoute(
+                    builder: (context) => const DailyQuizScreen(),
+                  );
                 case '/practice':
-                  return MaterialPageRoute(builder: (context) => const PracticeScreen());
+                  return MaterialPageRoute(
+                    builder: (context) => const PracticeScreen(),
+                  );
                 case '/quiz':
-                  return MaterialPageRoute(builder: (context) => const QuizScreen());
+                  return MaterialPageRoute(
+                    builder: (context) => const QuizScreen(),
+                  );
                 case '/progress':
-                  return MaterialPageRoute(builder: (context) => const ProgressScreen());
+                  return MaterialPageRoute(
+                    builder: (context) => const ProgressScreen(),
+                  );
                 case '/notifications':
-                  return MaterialPageRoute(builder: (context) => const NotificationScreen());
+                  return MaterialPageRoute(
+                    builder: (context) => const NotificationScreen(),
+                  );
                 case '/history':
-                  return MaterialPageRoute(builder: (context) => const HistoryScreen());
+                  return MaterialPageRoute(
+                    builder: (context) => const HistoryScreen(),
+                  );
                 case '/home':
-                  return MaterialPageRoute(builder: (context) => const HomeScreenV3());
+                  return MaterialPageRoute(
+                    builder: (context) => const HomeScreenV3(),
+                  );
                 case '/profile':
-                  return MaterialPageRoute(builder: (context) => const ProfileScreen());
+                  return MaterialPageRoute(
+                    builder: (context) => const ProfileScreen(),
+                  );
                 case '/settings':
                   final auth = Provider.of<AuthProvider>(context, listen: false);
                   final user = {
                     'name': auth.fullName ?? 'User',
-                    'email': auth.email ?? ''
+                    'email': auth.email ?? '',
                   };
                   return MaterialPageRoute(
-                      builder: (context) => SettingsModernScreen(
-                            user: user,
-                            onLogout: () => auth.logout(),
-                          ));
+                    builder: (context) => SettingsModernScreen(
+                      user: user,
+                      onLogout: () => auth.logout(),
+                    ),
+                  );
                 case '/quizzes':
                   return MaterialPageRoute(
                     builder: (context) => QuizzesScreen(
@@ -109,11 +142,19 @@ class MyApp extends StatelessWidget {
                     ),
                   );
                 case '/leaderboard':
-                  return MaterialPageRoute(builder: (context) => const LeaderboardScreen());
+                  return MaterialPageRoute(
+                    builder: (context) => const LeaderboardScreen(),
+                  );
                 case '/community/create':
-                  return MaterialPageRoute(builder: (context) => const CommunityCreatePostScreen());
+                  return MaterialPageRoute(
+                    builder: (context) =>
+                        const CommunityCreatePostScreen(),
+                  );
                 case '/community/trending':
-                  return MaterialPageRoute(builder: (context) => const CommunityTrendingScreen());
+                  return MaterialPageRoute(
+                    builder: (context) =>
+                        const CommunityTrendingScreen(),
+                  );
                 default:
                   return null;
               }
@@ -124,3 +165,4 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+

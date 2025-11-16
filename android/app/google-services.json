@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1046577808922",
+    "project_id": "ostaad-88d1f",
+    "storage_bucket": "ostaad-88d1f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1046577808922:android:df28029a176c1dd1b8f3a3",
+        "android_client_info": {
+          "package_name": "com.example.flutter_figma"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAnsIhHeLg9QTA_VrvvME_ssuox0uOm4aY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
