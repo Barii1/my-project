@@ -5,7 +5,7 @@ import '../providers/app_state_provider.dart';
 
 class SettingsScreenClean extends StatefulWidget {
   final Map<String, dynamic> user;
-  final VoidCallback onLogout;
+  final Future<void> Function() onLogout;
 
   const SettingsScreenClean({super.key, required this.user, required this.onLogout});
 
@@ -51,7 +51,7 @@ class _SettingsScreenCleanState extends State<SettingsScreenClean> {
                 ],
               ),
             );
-            if (ok == true) widget.onLogout();
+            if (ok == true) await widget.onLogout();
           },
           icon: const Icon(Icons.logout),
           label: const Text('Sign out'),

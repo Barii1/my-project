@@ -85,4 +85,9 @@ class DefaultFirebaseOptions {
     storageBucket: 'ostaad-88d1f.firebasestorage.app',
     measurementId: 'G-EYZR81P4CG',
   );
+<<<<<<< HEAD
 }
+=======
+
+}
+>>>>>>> c3a1561 (Merge remote main into local main)

@@ -437,7 +437,7 @@ class _FlashcardsScreenState extends State<FlashcardsScreen> with SingleTickerPr
                     ),
                   ),
                 );
-              }).toList(),
+              }),
             ],
           ),
         ),

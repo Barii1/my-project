@@ -8,7 +8,7 @@ import '../providers/app_state_provider.dart';
 import '../theme/app_theme.dart';
 
 class NotesScreen extends StatefulWidget {
-  const NotesScreen({Key? key}) : super(key: key);
+  const NotesScreen({super.key});
 
   @override
   State<NotesScreen> createState() => _NotesScreenState();
@@ -93,11 +93,15 @@ class _NotesScreenState extends State<NotesScreen>
       final dir = await getApplicationDocumentsDirectory();
       final file = File('${dir.path}/$title-${DateTime.now().millisecondsSinceEpoch}.md');
       await file.writeAsString('# $title\n\n$content');
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Exported to ${file.path}')));
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Export failed')));
     } finally {
-      setState(() => _isSaving = false);
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
     }
   }
 
@@ -272,7 +276,7 @@ class _NotesScreenState extends State<NotesScreen>
                     width: double.infinity,
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.background,
+                      color: Theme.of(context).colorScheme.surface,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Column(
@@ -307,7 +311,7 @@ class _NotesScreenState extends State<NotesScreen>
 
 class _CodeChip extends StatelessWidget {
   final String text;
-  const _CodeChip({Key? key, required this.text}) : super(key: key);
+  const _CodeChip({required this.text});
 
   @override
   Widget build(BuildContext context) {

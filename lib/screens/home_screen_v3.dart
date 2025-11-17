@@ -10,6 +10,7 @@ import 'history_screen.dart';
 import 'quizzes_screen.dart';
 import 'community_modern.dart';
 import 'settings_modern.dart';
+import 'login_screen.dart';
 
 class HomeScreenV3 extends StatelessWidget {
   const HomeScreenV3({super.key});
@@ -457,7 +458,14 @@ class _HomeContentState extends State<_HomeContent> {
       // Settings tab
       SettingsModernScreen(
         user: user,
-        onLogout: () => authProvider.logout(),
+        onLogout: () async {
+          await authProvider.logout();
+          if (!context.mounted) return;
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+            (route) => false,
+          );
+        },
       ),
     ];
 

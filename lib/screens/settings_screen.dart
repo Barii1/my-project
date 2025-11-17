@@ -3,7 +3,7 @@ import 'settings_modern.dart';
 
 class SettingsScreen extends StatelessWidget {
   final Map<String, dynamic> user;
-  final VoidCallback onLogout;
+  final Future<void> Function() onLogout;
 
   const SettingsScreen({super.key, required this.user, required this.onLogout});
 

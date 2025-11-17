@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class DailyQuizScreen extends StatefulWidget {
-  const DailyQuizScreen({Key? key}) : super(key: key);
+  const DailyQuizScreen({super.key});
 
   @override
   State<DailyQuizScreen> createState() => _DailyQuizScreenState();

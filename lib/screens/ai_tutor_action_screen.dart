@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class AiTutorActionScreen extends StatelessWidget {
   final String title;
-  const AiTutorActionScreen({Key? key, required this.title}) : super(key: key);
+  const AiTutorActionScreen({super.key, required this.title});
 
   @override
   Widget build(BuildContext context) {

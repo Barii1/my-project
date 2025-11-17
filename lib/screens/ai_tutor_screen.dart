@@ -51,7 +51,7 @@ class AITutorScreen extends StatelessWidget {
                       child: Image.network(
                         'https://images.unsplash.com/photo-1526378724497-7f2d6f0d3f5f?q=80&w=800&auto=format&fit=crop&ixlib=rb-4.0.3&s=placeholder',
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(color: Theme.of(context).colorScheme.background),
+                        errorBuilder: (_, __, ___) => Container(color: Theme.of(context).colorScheme.surface),
                       ),
                     ),
                   ),
@@ -168,7 +168,7 @@ class AITutorScreen extends StatelessWidget {
                         const SizedBox(width: 6),
                         Text('•', style: TextStyle(color: fg, fontSize: 12)),
                         const SizedBox(width: 6),
-                        Row(children: [Icon(Icons.access_time, size: 12, color: fg), const SizedBox(width: 4), Text(time, style: TextStyle(fontSize: 12, color: fg != null ? fg.withAlpha((0.7 * 255).round()) : null))] )
+                        Row(children: [Icon(Icons.access_time, size: 12, color: fg), const SizedBox(width: 4), Text(time, style: TextStyle(fontSize: 12, color: fg?.withAlpha((0.7 * 255).round())))] )
                       ],
                     )
                   ],

@@ -5,7 +5,7 @@ import '../theme/app_theme.dart';
 
 class SettingsModernScreen extends StatelessWidget {
   final Map<String, dynamic> user;
-  final VoidCallback onLogout;
+  final Future<void> Function() onLogout;
 
   const SettingsModernScreen({super.key, required this.user, required this.onLogout});
 
@@ -80,7 +80,7 @@ class SettingsModernScreen extends StatelessWidget {
                   ],
                 ),
               );
-              if (ok == true) onLogout();
+              if (ok == true) await onLogout();
             },
             icon: const Icon(Icons.logout),
             label: const Text('Sign out'),

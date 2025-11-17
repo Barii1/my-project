@@ -107,9 +107,10 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
   Future<void> _handleImageUpload() async {
     final ImagePicker picker = ImagePicker();
     final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-    
+
     if (image == null) return;
-    
+    if (!mounted) return;
+
     setState(() {
       _isLoading = true;
     });
@@ -142,10 +143,11 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
 
   Future<void> _handleCopyCode(String code, String messageId) async {
     await Clipboard.setData(ClipboardData(text: code));
+    if (!mounted) return;
     setState(() {
       _copiedMessageId = messageId;
     });
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Code copied to clipboard')),
     );
@@ -175,7 +177,7 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
 
     return Scaffold(
       body: Container(
-        color: Theme.of(context).colorScheme.background,
+        color: Theme.of(context).colorScheme.surface,
         child: Column(
           children: [
             // Enhanced Header with Gradient
@@ -381,7 +383,7 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.background,
+                          color: Theme.of(context).colorScheme.surface,
                             borderRadius: BorderRadius.circular(16),
                               border: Border.all(
                               color: Theme.of(context).colorScheme.onSurface.withAlpha((0.15 * 255).round()),
@@ -516,7 +518,7 @@ class _MessageBubble extends StatelessWidget {
               Container(
                 decoration: BoxDecoration(
                   color: isDark
-                      ? Theme.of(context).colorScheme.surfaceVariant
+                      ? Theme.of(context).colorScheme.surfaceContainerHighest
                       : Colors.black87,
                   borderRadius: BorderRadius.circular(12),
                 ),

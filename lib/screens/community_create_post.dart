@@ -5,7 +5,7 @@ class CommunityCreatePostScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final TextEditingController _controller = TextEditingController();
+    final TextEditingController controller = TextEditingController();
     return Scaffold(
       appBar: AppBar(title: const Text('Create Post')),
       body: Padding(
@@ -13,7 +13,7 @@ class CommunityCreatePostScreen extends StatelessWidget {
         child: Column(
           children: [
             TextField(
-              controller: _controller,
+              controller: controller,
               maxLines: 6,
               decoration: const InputDecoration(hintText: "What's on your mind?"),
             ),

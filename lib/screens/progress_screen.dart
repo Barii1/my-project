@@ -92,9 +92,9 @@ class ProgressScreen extends StatelessWidget {
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Your Progress', style: TextStyle(color: Theme.of(context).colorScheme.onBackground, fontSize: 24, fontWeight: FontWeight.w700)),
+                      Text('Your Progress', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 24, fontWeight: FontWeight.w700)),
                       const SizedBox(height: 6),
-                      Text('Track your learning journey', style: TextStyle(color: Theme.of(context).colorScheme.onBackground.withAlpha((0.6 * 255).round()))),
+                      Text('Track your learning journey', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withAlpha((0.6 * 255).round()))),
                     ],
                 ),
               ),
@@ -167,8 +167,8 @@ class ProgressScreen extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                                  Text(skill['skill'] as String, style: TextStyle(color: Theme.of(context).colorScheme.onBackground)),
-                                  Text('Level $level/$maxLevel', style: TextStyle(color: Theme.of(context).colorScheme.onBackground.withAlpha((0.6 * 255).round()), fontSize: 12)),
+                                  Text(skill['skill'] as String, style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+                                  Text('Level $level/$maxLevel', style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withAlpha((0.6 * 255).round()), fontSize: 12)),
                                 ]),
                                 const SizedBox(height: 8),
                                 ClipRRect(
@@ -177,7 +177,7 @@ class ProgressScreen extends StatelessWidget {
                                     value: value,
                                     minHeight: 10,
                                     valueColor: AlwaysStoppedAnimation<Color>(AppTheme.secondary),
-                                    backgroundColor: Theme.of(context).colorScheme.surfaceVariant,
+                                    backgroundColor: Theme.of(context).colorScheme.surfaceContainerHighest,
                                   ),
                                 ),
                                 const SizedBox(height: 12),
@@ -247,7 +247,7 @@ class ProgressScreen extends StatelessWidget {
                       Row(children: [
                         Icon(Icons.emoji_events, color: AppTheme.secondary),
                         const SizedBox(width: 8),
-                        Text('Badges Unlocked', style: TextStyle(color: Theme.of(context).colorScheme.onBackground, fontWeight: FontWeight.w600)),
+                        Text('Badges Unlocked', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w600)),
                       ]),
                       const SizedBox(height: 12),
                       GridView.count(
