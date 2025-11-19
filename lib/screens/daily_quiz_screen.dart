@@ -94,15 +94,37 @@ class _DailyQuizScreenState extends State<DailyQuizScreen> {
                           onTap: () => _select(i),
                           child: Container(
                             decoration: BoxDecoration(
-                              color: selected ? Theme.of(context).colorScheme.primary.withAlpha((0.12 * 255).round()) : Theme.of(context).cardColor,
+                              color: selected
+                                  ? Theme.of(context).colorScheme.primary.withAlpha((0.12 * 255).round())
+                                  : Theme.of(context).cardColor,
                               borderRadius: BorderRadius.circular(10),
                             ),
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                             child: Row(
                               children: [
-                                Radio<int>(value: i, groupValue: _selected, onChanged: (int? v) => _select(v!)),
-                                const SizedBox(width: 8),
-                                Expanded(child: Text(opt)),
+                                // Custom circular indicator instead of deprecated Radio API
+                                Container(
+                                  width: 22,
+                                  height: 22,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: Theme.of(context).colorScheme.primary,
+                                      width: 2,
+                                    ),
+                                    color: selected ? Theme.of(context).colorScheme.primary : Colors.transparent,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    opt,
+                                    style: TextStyle(
+                                      color: Theme.of(context).textTheme.bodyLarge?.color,
+                                      fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                                    ),
+                                  ),
+                                ),
                               ],
                             ),
                           ),

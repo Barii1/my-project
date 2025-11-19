@@ -88,20 +88,19 @@ class _NotesScreenState extends State<NotesScreen>
   }
 
   Future<void> _doExport(String title, String content) async {
+    if (!mounted) return;
     setState(() => _isSaving = true);
+    final messenger = ScaffoldMessenger.of(context);
     try {
       final dir = await getApplicationDocumentsDirectory();
       final file = File('${dir.path}/$title-${DateTime.now().millisecondsSinceEpoch}.md');
       await file.writeAsString('# $title\n\n$content');
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Exported to ${file.path}')));
+      messenger.showSnackBar(SnackBar(content: Text('Exported to ${file.path}')));
     } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Export failed')));
+      if (mounted) messenger.showSnackBar(const SnackBar(content: Text('Export failed')));
     } finally {
-      if (mounted) {
-        setState(() => _isSaving = false);
-      }
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 
@@ -110,7 +109,9 @@ class _NotesScreenState extends State<NotesScreen>
     final content = _contentController.text;
     final appState = Provider.of<AppStateProvider>(context, listen: false);
     appState.addFlashcardsFromNote(title, content);
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Flashcards created from note')));
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Flashcards created from note')));
+    }
     // Optionally navigate to flashcards screen
     Navigator.of(context).pushNamed('/flashcards');
   }

@@ -1,14 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-<<<<<<< HEAD
-
 // 🔹 Firebase imports
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-=======
-import 'package:firebase_core/firebase_core.dart';        // 🔹 NEW
-import 'firebase_options.dart';                           // 🔹 NEW
->>>>>>> c3a1561 (Merge remote main into local main)
 
 import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
@@ -33,24 +27,14 @@ import 'screens/community_create_post.dart';
 import 'screens/community_trending.dart';
 
 Future<void> main() async {
-<<<<<<< HEAD
-  // Needed before any async + Firebase calls
-  WidgetsFlutterBinding.ensureInitialized();
-
-  // 🔹 Initialize Firebase using your generated options
-=======
   WidgetsFlutterBinding.ensureInitialized();
 
   // 🔹 Initialize Firebase BEFORE using FirebaseAuth / providers
->>>>>>> c3a1561 (Merge remote main into local main)
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-<<<<<<< HEAD
   // Your UI setup
-=======
->>>>>>> c3a1561 (Merge remote main into local main)
   AppTheme.setSystemUI();
 
   runApp(const MyApp());
@@ -95,7 +79,6 @@ class MyApp extends StatelessWidget {
                   );
                 case '/notes':
                   return MaterialPageRoute(
-<<<<<<< HEAD
                     builder: (context) => const NotesScreen(),
                   );
                 case '/dailyQuiz':
@@ -130,33 +113,6 @@ class MyApp extends StatelessWidget {
                   return MaterialPageRoute(
                     builder: (context) => const ProfileScreen(),
                   );
-=======
-                      builder: (context) => const NotesScreen());
-                case '/dailyQuiz':
-                  return MaterialPageRoute(
-                      builder: (context) => const DailyQuizScreen());
-                case '/practice':
-                  return MaterialPageRoute(
-                      builder: (context) => const PracticeScreen());
-                case '/quiz':
-                  return MaterialPageRoute(
-                      builder: (context) => const QuizScreen());
-                case '/progress':
-                  return MaterialPageRoute(
-                      builder: (context) => const ProgressScreen());
-                case '/notifications':
-                  return MaterialPageRoute(
-                      builder: (context) => const NotificationScreen());
-                case '/history':
-                  return MaterialPageRoute(
-                      builder: (context) => const HistoryScreen());
-                case '/home':
-                  return MaterialPageRoute(
-                      builder: (context) => const HomeScreenV3());
-                case '/profile':
-                  return MaterialPageRoute(
-                      builder: (context) => const ProfileScreen());
->>>>>>> c3a1561 (Merge remote main into local main)
                 case '/settings':
                   final auth =
                       Provider.of<AuthProvider>(context, listen: false);
@@ -167,9 +123,6 @@ class MyApp extends StatelessWidget {
                   return MaterialPageRoute(
                     builder: (context) => SettingsModernScreen(
                       user: user,
-<<<<<<< HEAD
-                      onLogout: () => auth.logout(),
-=======
                       onLogout: () async {
                         await auth.logout();
                         if (!context.mounted) return;
@@ -178,7 +131,6 @@ class MyApp extends StatelessWidget {
                           (route) => false,
                         );
                       },
->>>>>>> c3a1561 (Merge remote main into local main)
                     ),
                   );
                 case '/quizzes':
@@ -198,12 +150,8 @@ class MyApp extends StatelessWidget {
                   );
                 case '/leaderboard':
                   return MaterialPageRoute(
-<<<<<<< HEAD
                     builder: (context) => const LeaderboardScreen(),
                   );
-=======
-                      builder: (context) => const LeaderboardScreen());
->>>>>>> c3a1561 (Merge remote main into local main)
                 case '/community/create':
                   return MaterialPageRoute(
                     builder: (context) =>
@@ -224,7 +172,3 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-<<<<<<< HEAD
-
-=======
->>>>>>> c3a1561 (Merge remote main into local main)

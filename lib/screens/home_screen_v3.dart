@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+// provider already imported above
 import '../providers/auth_provider.dart';
 import '../theme/app_branding.dart';
 import '../theme/app_theme.dart';
@@ -11,6 +11,12 @@ import 'quizzes_screen.dart';
 import 'community_modern.dart';
 import 'settings_modern.dart';
 import 'login_screen.dart';
+import '../widgets/streak_card.dart';
+import '../widgets/quick_start_card.dart';
+import '../widgets/circular_progress_ring.dart';
+import 'package:provider/provider.dart';
+import '../providers/app_state_provider.dart';
+import '../models/chat_thread.dart';
 
 class HomeScreenV3 extends StatelessWidget {
   const HomeScreenV3({super.key});
@@ -50,6 +56,62 @@ class HomeScreenV3 extends StatelessWidget {
   }
 }
 
+class _RingWithLabel extends StatelessWidget {
+  final String title;
+  final int numerator;
+  final int denominator;
+  const _RingWithLabel({required this.title, required this.numerator, required this.denominator});
+
+  @override
+  Widget build(BuildContext context) {
+    final progress = denominator == 0 ? 0.0 : (numerator / denominator).clamp(0.0, 1.0);
+    final percentText = "${(progress * 100).round()}%";
+    return Expanded(
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 6),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardColor,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha((0.05 * 255).round()),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 110,
+              height: 110,
+              child: CircularProgressRing(
+                progress: progress,
+                label: percentText,
+                gradient: const [Color(0xFF00BFA6), Color(0xFF00E5FF)],
+                celebrateAtFull: true,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).textTheme.bodyMedium?.color,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _HomeContent extends StatefulWidget {
   const _HomeContent();
 
@@ -59,6 +121,22 @@ class _HomeContent extends StatefulWidget {
 
 class _HomeContentState extends State<_HomeContent> {
   int _selectedIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Warm up persisted recent chats
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final app = Provider.of<AppStateProvider>(context, listen: false);
+      app.loadRecentChatsFromPrefs();
+      // Seed some demo chats if empty (first run)
+      if (app.recentChats.isEmpty) {
+        app.addRecentChat(ChatThread(id: '1', title: 'Algorithms deep dive', subject: 'CS', time: DateTime.now().subtract(const Duration(minutes: 12)), preview: 'Let\'s explore Dijkstra...'));
+        app.addRecentChat(ChatThread(id: '2', title: 'Integration practice', subject: 'Math', time: DateTime.now().subtract(const Duration(hours: 3, minutes: 4)), preview: 'Try substitution on this one...'));
+        app.addRecentChat(ChatThread(id: '3', title: 'Exam strategy', subject: 'CS', time: DateTime.now().subtract(const Duration(days: 1, hours: 2)), preview: 'Focus on complexity analysis...'));
+      }
+    });
+  }
 
   void _onItemTapped(int index) {
     setState(() {
@@ -118,159 +196,46 @@ class _HomeContentState extends State<_HomeContent> {
             ],
           ),
           const SizedBox(height: 24),
-          _buildStatsCard(),
+          // New animated streak card
+          StreakCard(streak: 12),
+          const SizedBox(height: 24),
+          _buildProgressRingsRow(),
           const SizedBox(height: 24),
           _buildQuickStartSection(),
           const SizedBox(height: 24),
-          _buildRecentBadges(),
+          _buildRecentChatsSection(),
           const SizedBox(height: 24),
           _buildRecentProgress(),
         ],
     );
   }
 
-  Widget _buildStatsCard() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: AppTheme.appGradient,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha((0.05 * 255).round()),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  gradient: AppTheme.appGradient,
-                  shape: BoxShape.circle,
-                  boxShadow: [BoxShadow(color: Colors.black.withAlpha(20), blurRadius: 6, offset: const Offset(0,4))],
-                ),
-                child: Icon(Icons.local_fire_department, color: Theme.of(context).colorScheme.onPrimary, size: 24),
-              ),
-              const SizedBox(width: 12),
-              Text('Current Streak', 
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: Theme.of(context).colorScheme.onPrimary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              _buildStatItem('Quiz Master', '12/15'),
-              const SizedBox(width: 24),
-              _buildStatItem('Note Taker', '8/10'),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
+  // Removed old stats card in favor of StreakCard
 
-  Widget _buildStatItem(String title, String progress) {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title,
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onPrimary.withAlpha((0.7 * 255).round()),
-              fontSize: 14,
-            ),
-          ),
-          const SizedBox(height: 8),
-            ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: 0.8,
-              backgroundColor: Theme.of(context).colorScheme.onPrimary.withAlpha((0.24 * 255).round()),
-              valueColor: AlwaysStoppedAnimation(Theme.of(context).colorScheme.onPrimary),
-              minHeight: 8,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(progress,
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onPrimary,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // Removed old stat item helper
 
-  Widget _buildRecentBadges() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildProgressRingsRow() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        const Text('Recent Badges',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 16),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              _buildBadge('7-day Streak', Icons.local_fire_department),
-              _buildBadge('Quiz Master', Icons.psychology),
-              _buildBadge('Note Taker', Icons.edit_note),
-            ],
-          ),
-        ),
+        _RingWithLabel(title: 'Quiz Master', numerator: 12, denominator: 15),
+        _RingWithLabel(title: 'Note Taker', numerator: 8, denominator: 10),
       ],
     );
   }
 
-  Widget _buildBadge(String title, IconData icon) {
-    return Container(
-      margin: const EdgeInsets.only(right: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Theme.of(context).cardColor,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha((0.05 * 255).round()),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  gradient: AppTheme.appGradient,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(icon, color: Colors.white, size: 24),
-              ),
-          const SizedBox(height: 8),
-          Text(title,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
+
+  Widget _buildRecentChatsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Recent Chats', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 260,
+          child: _RecentChatsList(),
+        ),
+      ],
     );
   }
 
@@ -326,29 +291,29 @@ class _HomeContentState extends State<_HomeContent> {
     );
   }
   Widget _buildQuickCard(String text, IconData icon, {required VoidCallback onPressed}) {
-    final primary = Theme.of(context).colorScheme.primary;
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onPressed,
-        child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: primary.withAlpha((0.12 * 255).round()), borderRadius: BorderRadius.circular(8)),
-                child: Icon(icon, color: primary, size: 28),
-              ),
-              const SizedBox(height: 8),
-              Text(text, style: TextStyle(fontWeight: FontWeight.w600, color: Theme.of(context).textTheme.bodyLarge?.color)),
-            ],
-          ),
-        ),
-      ),
+    // Map labels to lottie assets
+    String asset;
+    switch (text) {
+      case 'Daily Quiz':
+        asset = 'assets/lottie/brain.json';
+        break;
+      case 'Flashcards':
+        asset = 'assets/lottie/cards.json';
+        break;
+      case 'Practice':
+        asset = 'assets/lottie/target.json';
+        break;
+      case 'Notes':
+        asset = 'assets/lottie/pen.json';
+        break;
+      default:
+        asset = 'assets/lottie/brain.json';
+    }
+    return QuickStartCard(
+      title: text,
+      lottieAsset: asset,
+      fallbackIcon: icon,
+      onTap: onPressed,
     );
   }
 
@@ -390,8 +355,8 @@ class _HomeContentState extends State<_HomeContent> {
               ElevatedButton(
                 onPressed: () => Navigator.of(context).pushNamed('/dailyQuiz'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).cardColor,
-                  foregroundColor: Theme.of(context).colorScheme.primary,
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                   elevation: 0,
                 ),
@@ -534,6 +499,174 @@ class _HomeContentState extends State<_HomeContent> {
           ),
         ),
       ],
+    );
+  }
+}
+
+// Recent Chats AnimatedList
+class _RecentChatsList extends StatefulWidget {
+  const _RecentChatsList();
+
+  @override
+  State<_RecentChatsList> createState() => _RecentChatsListState();
+}
+
+class _RecentChatsListState extends State<_RecentChatsList> {
+  final Set<String> _collapsing = <String>{};
+
+  Color _subjectStartColor(String subject) {
+    switch (subject.toLowerCase()) {
+      case 'cs':
+        return const Color(0xFF7C4DFF); // purple
+      case 'math':
+        return const Color(0xFFFF7043); // orange/red
+      default:
+        return const Color(0xFF29B6F6); // blue
+    }
+  }
+
+  Color _subjectEndColor(String subject) {
+    switch (subject.toLowerCase()) {
+      case 'cs':
+        return const Color(0xFF536DFE); // indigo-blue
+      case 'math':
+        return const Color(0xFFEF5350); // red
+      default:
+        return const Color(0xFF00E5FF); // cyan
+    }
+  }
+
+  String _timeAgo(DateTime t) {
+    final diff = DateTime.now().difference(t);
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m';
+    if (diff.inHours < 24) return '${diff.inHours}h';
+    return '${diff.inDays}d';
+  }
+
+  Widget _buildItem(BuildContext context, ChatThread chat) {
+    final start = _subjectStartColor(chat.subject);
+    final end = _subjectEndColor(chat.subject);
+
+    return AnimatedSize(
+      duration: const Duration(milliseconds: 260),
+      curve: Curves.easeInOut,
+      alignment: Alignment.topCenter,
+      child: _collapsing.contains(chat.id)
+          ? const SizedBox.shrink()
+          : Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Dismissible(
+          key: ValueKey(chat.id),
+          direction: DismissDirection.endToStart,
+          background: Container(
+            decoration: BoxDecoration(
+              color: Colors.red.shade600,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            alignment: Alignment.centerRight,
+            padding: const EdgeInsets.only(right: 20),
+            child: const Icon(Icons.delete, color: Colors.white),
+          ),
+          confirmDismiss: (_) async {
+            setState(() => _collapsing.add(chat.id));
+            await Future.delayed(const Duration(milliseconds: 260));
+            if (!mounted) return false;
+            Provider.of<AppStateProvider>(context, listen: false).removeRecentChat(chat.id);
+            return false; // we remove manually via provider after animation
+          },
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                // Open chat — navigation can be implemented by caller
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Open chat: ${chat.title}')));
+              },
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).cardColor,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    // Gradient left border
+                    Container(
+                      width: 6,
+                      height: 56,
+                      margin: const EdgeInsets.only(right: 12),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(4),
+                        gradient: LinearGradient(colors: [start, end], begin: Alignment.topCenter, end: Alignment.bottomCenter),
+                      ),
+                    ),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(chat.title, style: const TextStyle(fontWeight: FontWeight.w600)),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(_timeAgo(chat.time), style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color?.withAlpha((0.6 * 255).round()), fontSize: 12)),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: start.withOpacity(0.12),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: start.withAlpha((0.12 * 255).round())),
+                                ),
+                                child: Text(chat.subject, style: TextStyle(color: start, fontWeight: FontWeight.w700, fontSize: 12)),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(child: Text(chat.preview, style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color), overflow: TextOverflow.ellipsis)),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    // trailing chevron with fade
+                    ShaderMask(
+                      shaderCallback: (Rect rect) {
+                        return const LinearGradient(
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
+                          colors: [Colors.transparent, Colors.grey],
+                        ).createShader(rect);
+                      },
+                      blendMode: BlendMode.srcIn,
+                      child: const Padding(
+                        padding: EdgeInsets.only(left: 8, right: 4),
+                        child: Icon(Icons.chevron_right, size: 26, color: Colors.grey),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<AppStateProvider>(
+      builder: (context, app, _) {
+        final chats = app.recentChats;
+        return ListView.builder(
+          itemCount: chats.length,
+          itemBuilder: (context, index) => _buildItem(context, chats[index]),
+        );
+      },
     );
   }
 }

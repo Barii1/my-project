@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' show pi, sin;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -42,8 +41,10 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
   final TextEditingController _inputController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   late final AnimationController _loadingController;
+  late final AnimationController _micPulseController;
   String? _copiedMessageId;
   bool _isLoading = false;
+  bool _isListening = false;
 
   @override
   void initState() {
@@ -51,6 +52,12 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
     _loadingController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
+    );
+    _micPulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+      lowerBound: 0.0,
+      upperBound: 1.0,
     );
     // update UI when input changes so send button state updates
     _inputController.addListener(() {
@@ -83,22 +90,23 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
     _scrollToBottom();
     _loadingController.repeat();
 
-    // Simulate AI response
+    // Simulate AI response with streaming text
     Timer(const Duration(seconds: 1), () {
       if (!mounted) return;
-      
+      final fullText = 'Great question about $text! Let me explain...';
+      final codeBlock = text.toLowerCase().contains('code') || text.toLowerCase().contains('algorithm')
+          ? 'function example() {\n  // Here\'s a sample implementation\n  return "result";\n}'
+          : null;
+
       setState(() {
         _messages.add(Message(
           id: (DateTime.now().millisecondsSinceEpoch + 1).toString(),
-          content: 'Great question about $text! Let me explain...',
+          content: fullText,
           isUser: false,
-          code: text.toLowerCase().contains('code') || text.toLowerCase().contains('algorithm')
-              ? 'function example() {\n  // Here\'s a sample implementation\n  return "result";\n}'
-              : null,
+          code: codeBlock,
         ));
         _isLoading = false;
       });
-      
       _scrollToBottom();
       _loadingController.stop();
     });
@@ -176,9 +184,11 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      body: Container(
-        color: Theme.of(context).colorScheme.surface,
-        child: Column(
+      body: Stack(
+        children: [
+          Container(
+            color: Theme.of(context).colorScheme.surface,
+            child: Column(
           children: [
             // Enhanced Header with Gradient
             Container(
@@ -324,31 +334,10 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
       if (_isLoading)
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-          child: Row(
-    children: List.generate(3, (index) {
-      return AnimatedBuilder(
-                animation: _loadingController,
-                builder: (context, child) {
-                  final animation = sin((_loadingController.value * 2 * pi) + (index * pi / 2));
-                  return Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 2),
-                    child: Transform.translate(
-                      offset: Offset(0, -3 * animation),
-                      child: Container(
-                        width: 6,
-                        height: 6,
-                        decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.onSurface.withAlpha((0.5 * 255).round()),
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              );
-            }),
-          ),
-        ),            // Input
+          child: const _TypingIndicatorDots(),
+        ),
+
+            // Input
             Container(
               padding: EdgeInsets.fromLTRB(
                 24,
@@ -431,6 +420,27 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
             ),
           ],
         ),
+          // Floating Mic Button
+          ),
+          Positioned(
+            right: 20,
+            bottom: 90,
+            child: _MicFab(
+              isActive: _isListening,
+              controller: _micPulseController,
+              onPressed: () {
+                setState(() {
+                  _isListening = !_isListening;
+                });
+                if (_isListening) {
+                  _micPulseController.repeat(reverse: true);
+                } else {
+                  _micPulseController.stop();
+                }
+              },
+            ),
+          ),
+        ],
       ),
     );
 
@@ -443,6 +453,7 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
     _inputController.dispose();
     _scrollController.dispose();
     _loadingController.dispose();
+    _micPulseController.dispose();
     super.dispose();
   }
 }
@@ -473,30 +484,49 @@ class _MessageBubble extends StatelessWidget {
           gradient: message.isUser ? AppTheme.appGradient : null,
           color: message.isUser
               ? null
-              : isDark
-                  ? Theme.of(context).colorScheme.surface
-                  : Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(16),
+              : (isDark ? const Color(0xFF202124) : Colors.grey.shade100),
+          borderRadius: BorderRadius.circular(18),
           border: message.isUser
-        ? null
-        : Border.all(
-          color: isDark
-            ? Colors.white.withAlpha((0.1 * 255).round())
-            : AppTheme.slate.withAlpha((0.1 * 255).round()),
-        ),
+              ? null
+              : Border.all(
+                  color: isDark
+                      ? Colors.white.withAlpha((0.08 * 255).round())
+                      : AppTheme.slate.withAlpha((0.12 * 255).round()),
+                ),
+          boxShadow: [
+            if (message.isUser)
+              BoxShadow(
+                color: AppTheme.primary.withAlpha((0.22 * 255).round()),
+                blurRadius: 14,
+                offset: const Offset(0, 6),
+              )
+            else
+              BoxShadow(
+                color: (isDark ? Colors.black : Colors.grey.shade400).withAlpha((0.12 * 255).round()),
+                blurRadius: 12,
+                offset: const Offset(0, 6),
+              ),
+          ],
         ),
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              message.content,
-              style: TextStyle(
-                color: message.isUser
-                    ? Colors.white
-                    : Theme.of(context).colorScheme.onSurface,
+            if (message.isUser)
+              Text(
+                message.content,
+                style: const TextStyle(
+                  color: Colors.white,
+                ),
+              )
+            else
+              _StreamingText(
+                key: ValueKey(message.id),
+                text: message.content,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
               ),
-            ),
             if (message.hasImage) ...[
               const SizedBox(height: 8),
               Container(
@@ -556,6 +586,165 @@ class _MessageBubble extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _StreamingText extends StatefulWidget {
+  final String text;
+  final TextStyle? style;
+  const _StreamingText({super.key, required this.text, this.style});
+
+  @override
+  State<_StreamingText> createState() => _StreamingTextState();
+}
+
+class _StreamingTextState extends State<_StreamingText>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _anim;
+
+  @override
+  void initState() {
+    super.initState();
+    final length = widget.text.length.clamp(1, 2000);
+    final durationMs = (length * 35).clamp(400, 2500);
+    _controller = AnimationController(
+      vsync: this,
+      duration: Duration(milliseconds: durationMs),
+    );
+    _anim = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
+    _controller.forward();
+  }
+
+  @override
+  void didUpdateWidget(covariant _StreamingText oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.text != widget.text) {
+      _controller
+        ..reset()
+        ..forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _anim,
+      builder: (context, _) {
+        final count = (widget.text.length * _anim.value).floor().clamp(0, widget.text.length);
+        final visible = widget.text.substring(0, count);
+        return Text(visible, style: widget.style);
+      },
+    );
+  }
+}
+
+class _TypingIndicatorDots extends StatefulWidget {
+  const _TypingIndicatorDots();
+
+  @override
+  State<_TypingIndicatorDots> createState() => _TypingIndicatorDotsState();
+}
+
+class _TypingIndicatorDotsState extends State<_TypingIndicatorDots> {
+  int _phase = 0;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(milliseconds: 280), (_) {
+      if (!mounted) return;
+      setState(() {
+        _phase = (_phase + 1) % 3;
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final baseColor = Theme.of(context).colorScheme.onSurface.withAlpha((0.6 * 255).round());
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: List.generate(3, (i) {
+        final active = i == _phase;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeInOut,
+          margin: const EdgeInsets.symmetric(horizontal: 3),
+          width: 8,
+          height: active ? 10 : 6,
+          decoration: BoxDecoration(
+            color: baseColor.withOpacity(active ? 1.0 : 0.5),
+            shape: BoxShape.circle,
+            boxShadow: [
+              if (active)
+                BoxShadow(
+                  color: baseColor.withAlpha((0.4 * 255).round()),
+                  blurRadius: 6,
+                  spreadRadius: 1,
+                ),
+            ],
+          ),
+        );
+      }),
+    );
+  }
+}
+
+class _MicFab extends StatelessWidget {
+  final bool isActive;
+  final AnimationController controller;
+  final VoidCallback onPressed;
+  const _MicFab({required this.isActive, required this.controller, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, child) {
+        final scale = isActive ? (1.0 + 0.08 * (controller.value)) : 1.0;
+        final glow = isActive ? (0.25 + 0.35 * controller.value) : 0.2;
+        return Transform.scale(
+          scale: scale,
+          child: GestureDetector(
+            onTap: onPressed,
+            child: Container(
+              width: 60,
+              height: 60,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: AppTheme.appGradient,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.primary.withOpacity(glow),
+                    blurRadius: isActive ? 24 : 12,
+                    spreadRadius: isActive ? 2 : 0,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: Icon(
+                isActive ? Icons.stop_rounded : Icons.mic,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

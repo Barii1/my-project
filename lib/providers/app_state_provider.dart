@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/flashcard.dart';
+import '../models/chat_thread.dart';
 
 class AppStateProvider with ChangeNotifier {
   // Theme
@@ -121,6 +122,46 @@ class AppStateProvider with ChangeNotifier {
       for (final item in data) {
         final map = item as Map<String, dynamic>;
         _flashcards.add(Flashcard(front: map['front'] ?? '', back: map['back'] ?? ''));
+      }
+      notifyListeners();
+    } catch (_) {}
+  }
+
+  // Recent Chats
+  final List<ChatThread> _recentChats = [];
+  List<ChatThread> get recentChats => List.unmodifiable(_recentChats);
+
+  void addRecentChat(ChatThread chat) {
+    _recentChats.removeWhere((c) => c.id == chat.id);
+    _recentChats.insert(0, chat);
+    notifyListeners();
+    saveRecentChatsToPrefs();
+  }
+
+  void removeRecentChat(String id) {
+    _recentChats.removeWhere((c) => c.id == id);
+    notifyListeners();
+    saveRecentChatsToPrefs();
+  }
+
+  Future<void> saveRecentChatsToPrefs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final list = _recentChats.map((c) => c.toJson()).toList();
+      await prefs.setString('recent_chats', jsonEncode(list));
+    } catch (_) {}
+  }
+
+  Future<void> loadRecentChatsFromPrefs() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final jsonStr = prefs.getString('recent_chats');
+      if (jsonStr == null) return;
+      final data = jsonDecode(jsonStr) as List<dynamic>;
+      _recentChats.clear();
+      for (final item in data) {
+        final map = item as Map<String, dynamic>;
+        _recentChats.add(ChatThread.fromJson(map));
       }
       notifyListeners();
     } catch (_) {}

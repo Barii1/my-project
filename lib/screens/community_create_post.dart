@@ -20,11 +20,34 @@ class CommunityCreatePostScreen extends StatelessWidget {
             const SizedBox(height: 12),
             Row(
               children: [
-                ElevatedButton.icon(onPressed: () {}, icon: const Icon(Icons.image), label: const Text('Attach')),
+                // Group left-side actions in a Wrap to avoid width overflows
+                Flexible(
+                  fit: FlexFit.loose,
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: () {},
+                        icon: const Icon(Icons.image),
+                        label: const Text('Attach'),
+                      ),
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                        child: const Text('Post'),
+                      ),
+                    ],
+                  ),
+                ),
                 const SizedBox(width: 8),
-                ElevatedButton(onPressed: () { Navigator.of(context).pop(); }, child: const Text('Post')),
-                const Spacer(),
-                OutlinedButton(onPressed: () { Navigator.of(context).pop(); }, child: const Text('Cancel')),
+                OutlinedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  child: const Text('Cancel'),
+                ),
               ],
             )
           ],

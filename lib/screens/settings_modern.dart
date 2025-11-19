@@ -208,37 +208,29 @@ class _AppearanceSettingsPage extends StatelessWidget {
     final appState = Provider.of<AppStateProvider>(context);
     return Scaffold(
       appBar: AppBar(title: const Text('Appearance')),
-      body: ListView(
+      body: Padding(
         padding: const EdgeInsets.all(16),
-        children: [
-          ListTile(
-            title: const Text('System'),
-            trailing: Radio<ThemeMode>(
-              value: ThemeMode.system,
-              groupValue: appState.themeMode,
-              onChanged: (v) => appState.setThemeMode(v ?? ThemeMode.system),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Theme', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 12),
+            SegmentedButton<ThemeMode>(
+              segments: const <ButtonSegment<ThemeMode>>[
+                ButtonSegment(value: ThemeMode.system, label: Text('System'), icon: Icon(Icons.settings_suggest_outlined)),
+                ButtonSegment(value: ThemeMode.light, label: Text('Light'), icon: Icon(Icons.light_mode_outlined)),
+                ButtonSegment(value: ThemeMode.dark, label: Text('Dark'), icon: Icon(Icons.dark_mode_outlined)),
+              ],
+              selected: <ThemeMode>{appState.themeMode},
+              showSelectedIcon: false,
+              onSelectionChanged: (selection) {
+                if (selection.isNotEmpty) {
+                  appState.setThemeMode(selection.first);
+                }
+              },
             ),
-            onTap: () => appState.setThemeMode(ThemeMode.system),
-          ),
-          ListTile(
-            title: const Text('Light'),
-            trailing: Radio<ThemeMode>(
-              value: ThemeMode.light,
-              groupValue: appState.themeMode,
-              onChanged: (v) => appState.setThemeMode(v ?? ThemeMode.light),
-            ),
-            onTap: () => appState.setThemeMode(ThemeMode.light),
-          ),
-          ListTile(
-            title: const Text('Dark'),
-            trailing: Radio<ThemeMode>(
-              value: ThemeMode.dark,
-              groupValue: appState.themeMode,
-              onChanged: (v) => appState.setThemeMode(v ?? ThemeMode.dark),
-            ),
-            onTap: () => appState.setThemeMode(ThemeMode.dark),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

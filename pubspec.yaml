@@ -19,13 +19,11 @@ dependencies:
   flutter_svg: ^2.0.9
   image: ^4.1.3
   image_picker: ^1.2.0
-<<<<<<< HEAD
-=======
-  firebase_core: ^3.9.0
-  firebase_auth: ^5.3.0
-
->>>>>>> c3a1561 (Merge remote main into local main)
   path_provider: ^2.0.15
+  rive: ^0.13.10
+  flare_flutter: ^3.0.2
+  confetti: ^0.7.0
+  lottie: ^2.7.0
 
   # 🔥 Firebase core (required for all Firebase features)
   firebase_core: ^3.9.0 # or latest compatible; you can also run `flutter pub add firebase_core`
@@ -65,3 +63,5 @@ flutter:
   assets:
     - assets/images/
     - assets/styles/
+    - assets/animations/
+    - assets/lottie/

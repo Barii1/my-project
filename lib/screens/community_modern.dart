@@ -114,16 +114,24 @@ class _FilterChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(right: 8),
-      child: OutlinedButton(
+      child: ActionChip(
         onPressed: () {
-          if (label == 'Trending') Navigator.of(context).pushNamed('/community/trending');
+          if (label == 'Trending') {
+            Navigator.of(context).pushNamed('/community/trending');
+          }
         },
-        style: OutlinedButton.styleFrom(
-          backgroundColor: Theme.of(context).cardColor,
-          foregroundColor: Theme.of(context).colorScheme.primary,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        label: Text(label,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.primary,
+              fontWeight: FontWeight.w600,
+            )),
+        backgroundColor: Theme.of(context).cardColor,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.24)),
         ),
-        child: Text(label),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        elevation: 0,
       ),
     );
   }
