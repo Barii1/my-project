@@ -676,7 +676,7 @@ class _TypingIndicatorDotsState extends State<_TypingIndicatorDots> {
 
   @override
   Widget build(BuildContext context) {
-    final baseColor = Theme.of(context).colorScheme.onSurface.withAlpha((0.6 * 255).round());
+    final baseRaw = Theme.of(context).colorScheme.onSurface;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: List.generate(3, (i) {
@@ -687,13 +687,13 @@ class _TypingIndicatorDotsState extends State<_TypingIndicatorDots> {
           margin: const EdgeInsets.symmetric(horizontal: 3),
           width: 8,
           height: active ? 10 : 6,
-          decoration: BoxDecoration(
-            color: baseColor.withOpacity(active ? 1.0 : 0.5),
+            decoration: BoxDecoration(
+            color: Color.fromRGBO((baseRaw.toARGB32() >> 16) & 0xFF, (baseRaw.toARGB32() >> 8) & 0xFF, baseRaw.toARGB32() & 0xFF, 0.6 * (active ? 1.0 : 0.5)),
             shape: BoxShape.circle,
             boxShadow: [
               if (active)
                 BoxShadow(
-                  color: baseColor.withAlpha((0.4 * 255).round()),
+                  color: Color.fromRGBO((baseRaw.toARGB32() >> 16) & 0xFF, (baseRaw.toARGB32() >> 8) & 0xFF, baseRaw.toARGB32() & 0xFF, 0.4),
                   blurRadius: 6,
                   spreadRadius: 1,
                 ),
@@ -730,7 +730,7 @@ class _MicFab extends StatelessWidget {
                 gradient: AppTheme.appGradient,
                 boxShadow: [
                   BoxShadow(
-                    color: AppTheme.primary.withOpacity(glow),
+                    color: Color.lerp(Colors.transparent, AppTheme.primary, glow)!,
                     blurRadius: isActive ? 24 : 12,
                     spreadRadius: isActive ? 2 : 0,
                     offset: const Offset(0, 6),

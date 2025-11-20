@@ -138,7 +138,7 @@ class _RingPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
       ..strokeWidth = 10
-      ..color = Colors.white.withOpacity(0.12);
+      ..color = const Color(0x1FFFFFFF);
 
     canvas.drawCircle(center, radius, bg);
 

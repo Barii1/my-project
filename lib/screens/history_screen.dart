@@ -174,9 +174,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                       decoration: BoxDecoration(
-                                        color: start.withOpacity(0.12),
+                                        color: Color.fromRGBO((start.toARGB32() >> 16) & 0xFF, (start.toARGB32() >> 8) & 0xFF, start.toARGB32() & 0xFF, 0.12),
                                         borderRadius: BorderRadius.circular(20),
-                                        border: Border.all(color: start.withAlpha((0.12 * 255).round())),
+                                        border: Border.all(color: Color.fromRGBO((start.toARGB32() >> 16) & 0xFF, (start.toARGB32() >> 8) & 0xFF, start.toARGB32() & 0xFF, 0.12)),
                                       ),
                                       child: Text(activity.subject,
                                           style: TextStyle(

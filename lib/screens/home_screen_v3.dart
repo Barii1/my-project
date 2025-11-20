@@ -25,7 +25,7 @@ class _HomeScreenV3State extends State<HomeScreenV3> with TickerProviderStateMix
   late AnimationController _sparkleController;
   late Animation<double> _sparkleAnimation;
 
-  List<bool> _isTapped = [false, false, false, false];
+  final List<bool> _isTapped = [false, false, false, false];
 
   @override
   void initState() {
@@ -183,7 +183,7 @@ class _HomeScreenV3State extends State<HomeScreenV3> with TickerProviderStateMix
         borderRadius: BorderRadius.circular(32),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: const Color(0x0A000000),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -248,7 +248,7 @@ class _HomeScreenV3State extends State<HomeScreenV3> with TickerProviderStateMix
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: const Color(0x05000000),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -348,7 +348,7 @@ class _HomeScreenV3State extends State<HomeScreenV3> with TickerProviderStateMix
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: const Color(0x0D000000),
             blurRadius: 10,
             offset: const Offset(0, -2),
           )
@@ -387,7 +387,7 @@ class _HomeScreenV3State extends State<HomeScreenV3> with TickerProviderStateMix
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFF00A3A3).withOpacity(0.25),
+                    color: const Color(0x4000A3A3),
                     blurRadius: 8,
                     spreadRadius: 1,
                   ),
@@ -435,9 +435,13 @@ class _HomeScreenV3State extends State<HomeScreenV3> with TickerProviderStateMix
         height: 120,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
-          transform: Matrix4.identity()
-            ..translate(0, _isTapped[index] ? -6.0 : 0.0)
-            ..scale(_isTapped[index] ? 0.985 : 1.0),
+          transform: (() {
+            final y = _isTapped[index] ? -6.0 : 0.0;
+            final s = _isTapped[index] ? 0.985 : 1.0;
+            final m = Matrix4.translationValues(0, y, 0);
+            m.multiply(Matrix4.diagonal3Values(s, s, s));
+            return m;
+          })(),
           decoration: BoxDecoration(
             color: const Color(0xFFFCE4EC),
             borderRadius: BorderRadius.circular(28),
@@ -447,7 +451,7 @@ class _HomeScreenV3State extends State<HomeScreenV3> with TickerProviderStateMix
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.02),
+                color: const Color(0x05000000),
                 blurRadius: 6,
                 offset: const Offset(0, 2),
               ),

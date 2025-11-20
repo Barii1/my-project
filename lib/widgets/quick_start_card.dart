@@ -78,20 +78,22 @@ class _QuickStartCardState extends State<QuickStartCard>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bg = Colors.white.withOpacity(isDark ? 0.08 : 0.12);
-    final border = Colors.white.withOpacity(isDark ? 0.18 : 0.22);
+    final bg = Color.fromRGBO(255, 255, 255, isDark ? 0.08 : 0.12);
+    final border = Color.fromRGBO(255, 255, 255, isDark ? 0.18 : 0.22);
 
     return AnimatedBuilder(
       animation: _glowCtl,
       builder: (context, child) {
         final glowAlpha = (0.22 + 0.12 * _glowCtl.value);
-        final glow = Colors.cyanAccent.withOpacity(isDark ? glowAlpha : glowAlpha * 0.8);
+        final glowAlphaUsed = isDark ? glowAlpha : glowAlpha * 0.8;
+        final glow = Color.lerp(Colors.transparent, Colors.cyanAccent, glowAlphaUsed)!;
 
         final matrix = Matrix4.identity()
           ..setEntry(3, 2, 0.001)
           ..rotateX(_tiltX)
-          ..rotateY(_tiltY)
-          ..scale(_pressed ? 1.02 : 1.0);
+          ..rotateY(_tiltY);
+        final s = _pressed ? 1.02 : 1.0;
+        matrix.multiply(Matrix4.diagonal3Values(s, s, s));
 
         return GestureDetector(
           onPanStart: _onPanStart,
@@ -108,7 +110,7 @@ class _QuickStartCardState extends State<QuickStartCard>
                 borderRadius: BorderRadius.circular(28),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(isDark ? 0.35 : 0.2),
+                    color: Color.fromRGBO(0, 0, 0, isDark ? 0.35 : 0.2),
                     blurRadius: 20,
                     offset: const Offset(0, 8),
                   ),
@@ -144,7 +146,7 @@ class _QuickStartCardState extends State<QuickStartCard>
                                       animate: true,
                                       fit: BoxFit.contain,
                                     )
-                                  : Icon(widget.fallbackIcon, color: Colors.white.withOpacity(0.9)),
+                                  : Icon(widget.fallbackIcon, color: const Color.fromRGBO(255, 255, 255, 0.9)),
                             );
                           },
                         ),
@@ -154,7 +156,7 @@ class _QuickStartCardState extends State<QuickStartCard>
                             widget.title,
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              color: Colors.white.withOpacity(isDark ? 0.95 : 0.98),
+                              color: Color.fromRGBO(255, 255, 255, isDark ? 0.95 : 0.98),
                               fontWeight: FontWeight.w700,
                               fontSize: 16,
                               letterSpacing: 0.2,
