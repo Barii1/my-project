@@ -22,10 +22,10 @@ class AITutorScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: const Color(0xFFFEF7FA),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -36,9 +36,9 @@ class AITutorScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('AI Tutor', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w700)),
+                            const Text('AI Tutor', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF1A1A1A), fontFamily: 'Poppins')),
                             const SizedBox(height: 6),
-                            Text('Get instant help with any topic', style: Theme.of(context).textTheme.bodySmall),
+                            const Text('Get instant help with any topic', style: TextStyle(fontSize: 14, color: Color(0xFF757575), fontFamily: 'Poppins')),
                           ],
                     ),
                   ),
@@ -64,11 +64,11 @@ class AITutorScreen extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Recent Chats', style: TextStyle(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface)),
+                  const Text('Recent Chats', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF1A1A1A), fontFamily: 'Poppins')),
                   TextButton(
                     onPressed: () => onNavigate('history'),
-                    style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.primary),
-                    child: const Text('View All'),
+                    style: TextButton.styleFrom(foregroundColor: const Color(0xFF00A8A8)),
+                    child: const Text('View All', style: TextStyle(fontFamily: 'Poppins')),
                   ),
                 ],
               ),
@@ -84,7 +84,7 @@ class AITutorScreen extends StatelessWidget {
 
               const SizedBox(height: 18),
 
-              Text('Select a Course', style: TextStyle(fontWeight: FontWeight.w600, color: Theme.of(context).colorScheme.onSurface)),
+              const Text('Select a Course', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF1A1A1A), fontFamily: 'Poppins')),
               const SizedBox(height: 12),
 
               // Course grid
@@ -97,30 +97,36 @@ class AITutorScreen extends StatelessWidget {
                     final item = _courses[index];
                     final icon = item['icon'] as IconData;
                     final name = item['name'] as String;
-                    final primary = Theme.of(context).colorScheme.primary;
-                    final cardColor = Theme.of(context).cardColor;
 
-                    return Material(
-                      color: cardColor,
-                      borderRadius: BorderRadius.circular(16),
-                      elevation: 1,
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(16),
-                        onTap: () => onSelectCourse(name),
-                        child: Padding(
-                          padding: const EdgeInsets.all(12),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Container(
-                                width: 48,
-                                height: 48,
-                                decoration: BoxDecoration(color: primary.withAlpha((0.12 * 255).round()), borderRadius: BorderRadius.circular(12)),
-                                child: Icon(icon, color: primary, size: 26),
-                              ),
-                              const SizedBox(height: 12),
-                              Text(name, style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color, fontWeight: FontWeight.w600)),
-                            ],
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(32),
+                        border: Border.all(color: const Color(0xFFFFE6ED), width: 1),
+                        boxShadow: const [
+                          BoxShadow(color: Color(0x10000000), blurRadius: 10, offset: Offset(0, 4)),
+                        ],
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(32),
+                          onTap: () => onSelectCourse(name),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  width: 56,
+                                  height: 56,
+                                  decoration: BoxDecoration(color: const Color(0xFFE6F7F7), borderRadius: BorderRadius.circular(16)),
+                                  child: Icon(icon, color: const Color(0xFF00A3A3), size: 28),
+                                ),
+                                const SizedBox(height: 12),
+                                Text(name, style: const TextStyle(fontSize: 14, color: Color(0xFF1A1A1A), fontWeight: FontWeight.w600, fontFamily: 'Poppins')),
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -136,45 +142,51 @@ class AITutorScreen extends StatelessWidget {
   }
 
   Widget _recentChatTile(BuildContext context, String course, String topic, String time) {
-    final primary = Theme.of(context).colorScheme.primary;
-    final fg = Theme.of(context).textTheme.bodyLarge?.color;
-    return Material(
-      color: Theme.of(context).cardColor,
-      borderRadius: BorderRadius.circular(12),
-      elevation: 0,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () => onSelectCourse(course),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(color: primary.withAlpha((0.12 * 255).round()), borderRadius: BorderRadius.circular(10)),
-                child: Icon(Icons.message, color: primary),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(topic, style: TextStyle(color: fg)),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Text(course, style: TextStyle(color: fg, fontSize: 12)),
-                        const SizedBox(width: 6),
-                        Text('•', style: TextStyle(color: fg, fontSize: 12)),
-                        const SizedBox(width: 6),
-                        Row(children: [Icon(Icons.access_time, size: 12, color: fg), const SizedBox(width: 4), Text(time, style: TextStyle(fontSize: 12, color: fg?.withAlpha((0.7 * 255).round())))] )
-                      ],
-                    )
-                  ],
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFFFE6ED), width: 1),
+        boxShadow: const [
+          BoxShadow(color: Color(0x08000000), blurRadius: 8, offset: Offset(0, 2)),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(24),
+          onTap: () => onSelectCourse(course),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(color: const Color(0xFFE6F7F7), borderRadius: BorderRadius.circular(10)),
+                  child: const Icon(Icons.message, color: Color(0xFF00A8A8)),
                 ),
-              )
-            ],
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(topic, style: const TextStyle(fontWeight: FontWeight.w600, fontFamily: 'Poppins', fontSize: 14, color: Color(0xFF1A1A1A))),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Text(course, style: const TextStyle(color: Color(0xFF757575), fontSize: 12, fontFamily: 'Poppins')),
+                          const SizedBox(width: 6),
+                          const Text('•', style: TextStyle(color: Color(0xFF757575), fontSize: 12)),
+                          const SizedBox(width: 6),
+                          Row(children: [const Icon(Icons.access_time, size: 12, color: Color(0xFF757575)), const SizedBox(width: 4), Text(time, style: const TextStyle(fontSize: 12, color: Color(0xFF999999), fontFamily: 'Poppins'))])
+                        ],
+                      )
+                    ],
+                  ),
+                )
+              ],
+            ),
           ),
         ),
       ),

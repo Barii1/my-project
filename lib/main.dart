@@ -21,6 +21,7 @@ import 'screens/quizzes_screen.dart';
 import 'screens/notification_screen.dart';
 import 'screens/leaderboard_screen.dart';
 import 'providers/auth_provider.dart';
+import 'providers/stats_provider.dart';
 import 'providers/app_state_provider.dart';
 import 'theme/app_theme.dart';
 import 'screens/community_create_post.dart';
@@ -48,6 +49,7 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => StatsProvider()),
         ChangeNotifierProvider(create: (_) {
           final p = AppStateProvider();
           p.loadFlashcardsFromPrefs();

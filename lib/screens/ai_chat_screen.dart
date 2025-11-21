@@ -59,11 +59,9 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
       lowerBound: 0.0,
       upperBound: 1.0,
     );
-    // update UI when input changes so send button state updates
     _inputController.addListener(() {
       if (mounted) setState(() {});
     });
-    // Add initial AI message
     _messages.add(
       Message(
         id: '1',
@@ -181,76 +179,76 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Scaffold(
+      backgroundColor: const Color(0xFFFEF7FA),
       body: Stack(
         children: [
-          Container(
-            color: Theme.of(context).colorScheme.surface,
-            child: Column(
-          children: [
-            // Enhanced Header with Gradient
-            Container(
-              padding: EdgeInsets.only(
-                top: MediaQuery.of(context).padding.top + 16,
-                bottom: 20,
-                left: 24,
-                right: 24,
-              ),
-                decoration: BoxDecoration(
-                gradient: isDark ? AppTheme.darkGradient : AppTheme.appGradient,
-                borderRadius: const BorderRadius.only(
-                  bottomLeft: Radius.circular(24),
-                  bottomRight: Radius.circular(24),
+          Column(
+            children: [
+              // Premium Header with Gradient
+              Container(
+                padding: EdgeInsets.only(
+                  top: MediaQuery.of(context).padding.top + 16,
+                  bottom: 20,
+                  left: 24,
+                  right: 24,
                 ),
-                boxShadow: [
-                  BoxShadow(
-                        color: (isDark ? Colors.black : AppTheme.primary).withAlpha((0.15 * 255).round()),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF00E5C2), Color(0xFF00A8A8)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
                   ),
-                ],
-              ),
-              child: Row(
-                children: [
-                  IconButton(
-                    onPressed: widget.onBack,
-                    icon: Icon(
-                      Icons.arrow_back,
-                      color: isDark ? Colors.white : Colors.white,
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(24),
+                    bottomRight: Radius.circular(24),
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Color(0x2600A8A8),
+                      blurRadius: 12,
+                      offset: Offset(0, 4),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          widget.course,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Row(
-                          children: [
-                            Container(
-                              width: 8,
-                              height: 8,
-                              decoration: const BoxDecoration(
-                                color: AppTheme.secondary,
-                                shape: BoxShape.circle,
-                              ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    IconButton(
+                      onPressed: widget.onBack,
+                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.course,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                              fontFamily: 'Poppins',
                             ),
-                            const SizedBox(width: 6),
-                            const Text(
-                              'AI Assistant Online',
-                              style: TextStyle(
-                                color: Colors.white70,
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  color: Colors.white,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              const Text(
+                                'AI Assistant Online',
+                                style: TextStyle(
+                                  color: Colors.white70,
                                 fontSize: 12,
+                                fontFamily: 'Poppins',
                               ),
                             ),
                           ],
@@ -258,7 +256,6 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
                       ],
                     ),
                   ),
-                  // Menu moved here so it doesn't overlap the input area
                   PopupMenuButton<String>(
                     onSelected: (value) {
                       switch (value) {
@@ -289,8 +286,8 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
                     child: Container(
                       width: 44,
                       height: 44,
-                      decoration: BoxDecoration(
-                        gradient: AppTheme.appGradient,
+                      decoration: const BoxDecoration(
+                        color: Colors.white24,
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(Icons.menu, color: Colors.white, size: 22),
@@ -300,7 +297,7 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
               ),
             ),
 
-      // Messages
+            // Messages
       Expanded(
         child: ListView.builder(
           controller: _scrollController,
@@ -357,14 +354,14 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
                 children: [
                   Container(
                     decoration: BoxDecoration(
-                      color: isDark ? Colors.white.withAlpha((0.1 * 255).round()) : AppTheme.primary.withAlpha((0.1 * 255).round()),
+                      color: const Color(0x1A00A8A8),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: IconButton(
                       onPressed: _handleImageUpload,
-                      icon: Icon(
+                      icon: const Icon(
                         Icons.image_outlined,
-                        color: isDark ? Colors.white : AppTheme.primary,
+                        color: Color(0xFF00A8A8),
                       ),
                     ),
                   ),
@@ -420,31 +417,30 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
             ),
           ],
         ),
-          // Floating Mic Button
+        // Floating Mic Button
+        Positioned(
+          right: 20,
+          bottom: 90,
+          child: _MicFab(
+            isActive: _isListening,
+            controller: _micPulseController,
+            onPressed: () {
+              setState(() {
+                _isListening = !_isListening;
+              });
+              if (_isListening) {
+                _micPulseController.repeat(reverse: true);
+              } else {
+                _micPulseController.stop();
+              }
+            },
           ),
-          Positioned(
-            right: 20,
-            bottom: 90,
-            child: _MicFab(
-              isActive: _isListening,
-              controller: _micPulseController,
-              onPressed: () {
-                setState(() {
-                  _isListening = !_isListening;
-                });
-                if (_isListening) {
-                  _micPulseController.repeat(reverse: true);
-                } else {
-                  _micPulseController.stop();
-                }
-              },
-            ),
-          ),
-        ],
+        ),
+      ],
       ),
     );
-
   }
+
 
   
 

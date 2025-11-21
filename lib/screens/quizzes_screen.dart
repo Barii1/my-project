@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
- 
-import 'quiz_taker_screen.dart';
-import '../theme/app_theme.dart';
+import 'sub_topics_screen.dart';
 
-typedef StartQuizCallback = void Function(Map<String, dynamic> quiz);
+typedef StartQuizCallback = void Function(String categoryId);
 typedef NavigateCallback = void Function(String screen);
 
 class QuizzesScreen extends StatelessWidget {
@@ -12,281 +10,309 @@ class QuizzesScreen extends StatelessWidget {
 
   const QuizzesScreen({super.key, required this.onStartQuiz, required this.onNavigate});
 
-  static final List<Map<String, dynamic>> _quizzes = [
+  static final List<Map<String, dynamic>> _categories = [
     {
-      'id': 'ds-basics',
-      'title': 'Data Structures Basics',
-      'subject': 'CS',
-      'questions': 15,
-      'duration': 20,
-      'difficulty': 'Easy',
-      'icon': Icons.memory,
-  'color': AppTheme.primary,
-      'offline': true,
+      'id': 'computer-science',
+      'title': 'Computer Science',
+      'subtitle': '15 topics • 450+ questions',
+      'icon': Icons.psychology,
+      'color': const Color(0xFF2980B9),
+      'gradientStart': const Color(0xFF2980B9),
+      'gradientEnd': const Color(0xFF3498DB),
     },
     {
-      'id': 'sorting-algo',
-      'title': 'Sorting Algorithms',
-      'subject': 'CS',
-      'questions': 12,
-      'duration': 15,
-      'difficulty': 'Medium',
-      'icon': Icons.memory,
-  'color': AppTheme.primary,
-      'offline': true,
-    },
-    {
-      'id': 'calculus-1',
-      'title': 'Calculus I - Derivatives',
-      'subject': 'Math',
-      'questions': 20,
-      'duration': 25,
-      'difficulty': 'Medium',
+      'id': 'mathematics',
+      'title': 'Mathematics',
+      'subtitle': '12 topics • 380+ questions',
       'icon': Icons.calculate,
-  'color': AppTheme.secondary,
-      'offline': true,
+      'color': const Color(0xFF16A085),
+      'gradientStart': const Color(0xFF16A085),
+      'gradientEnd': const Color(0xFF1ABC9C),
     },
     {
-      'id': 'integration',
-      'title': 'Integration Techniques',
-      'subject': 'Math',
-      'questions': 18,
-      'duration': 30,
-      'difficulty': 'Hard',
-      'icon': Icons.calculate,
-  'color': AppTheme.secondary,
-      'offline': false,
-    },
-    {
-      'id': 'trees-graphs',
-      'title': 'Trees & Graphs',
-      'subject': 'CS',
-      'questions': 16,
-      'duration': 22,
-      'difficulty': 'Hard',
-      'icon': Icons.memory,
-  'color': AppTheme.primary,
-      'offline': true,
-    },
-    {
-      'id': 'linear-algebra',
-      'title': 'Linear Algebra Basics',
-      'subject': 'Math',
-      'questions': 14,
-      'duration': 18,
-      'difficulty': 'Easy',
-      'icon': Icons.calculate,
-  'color': AppTheme.secondary,
-      'offline': false,
+      'id': 'general-knowledge',
+      'title': 'General Knowledge',
+      'subtitle': 'Fun • Mixed topics',
+      'icon': Icons.auto_awesome,
+      'color': const Color(0xFF9B59B6),
+      'gradientStart': const Color(0xFF9B59B6),
+      'gradientEnd': const Color(0xFF8E44AD),
     },
   ];
-
-  Color _difficultyColor(String difficulty) {
-    switch (difficulty) {
-      case 'Easy':
-        return AppTheme.secondary;
-      case 'Medium':
-        return AppTheme.warning;
-      default:
-        return AppTheme.error;
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
-        elevation: 0,
-        iconTheme: IconThemeData(color: Theme.of(context).colorScheme.primary),
-        title: Text('Quizzes', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.note_add_outlined),
-            onPressed: () => onNavigate('notes'),
-          ),
-        ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-        child: Column(
-          children: [
-            // Create Custom Quiz button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => onNavigate('notes'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      backgroundColor: const Color(0xFFFEF7FA),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(24, 32, 24, 96),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              const Text(
+                'Quizzes',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF34495E),
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Choose a category to start learning',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Color(0xFF64748B),
+                ),
+              ),
+              
+              const SizedBox(height: 24),
+
+              // Offline Badge
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF16A085).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withAlpha(30),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(Icons.add, color: Colors.white),
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Icon(
+                      Icons.wifi_off,
+                      size: 16,
+                      color: Color(0xFF16A085),
                     ),
-                    const SizedBox(width: 12),
-                    const Expanded(
-                      child: Text('Create Custom Quiz from Notes', style: TextStyle(fontSize: 16, color: Colors.white)),
+                    SizedBox(width: 8),
+                    Text(
+                      'All quizzes available offline',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFF16A085),
+                      ),
                     ),
                   ],
                 ),
               ),
-            ),
 
-            const SizedBox(height: 12),
+              const SizedBox(height: 24),
 
-            // Quiz list
-            Expanded(
-              child: ListView.separated(
-                itemCount: _quizzes.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 10),
-                itemBuilder: (context, index) {
-                  final quiz = _quizzes[index];
-                  final Color color = quiz['color'] as Color;
-                  final IconData icon = quiz['icon'] as IconData;
-                  final String difficulty = quiz['difficulty'] as String;
-                  final diffColor = _difficultyColor(difficulty);
+              // Category Cards
+              ...List.generate(_categories.length, (index) {
+                final category = _categories[index];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: _buildCategoryCard(
+                    context,
+                    category['id'] as String,
+                    category['title'] as String,
+                    category['subtitle'] as String,
+                    category['icon'] as IconData,
+                    category['gradientStart'] as Color,
+                    category['gradientEnd'] as Color,
+                  ),
+                );
+              }),
 
-                  return Material(
-                    color: Theme.of(context).cardColor,
-                    borderRadius: BorderRadius.circular(18),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(18),
-                      onTap: () async {
-                        // Open the quiz taker screen and wait for completion.
-                        await Navigator.of(context).push(MaterialPageRoute(
-                          builder: (_) => QuizTakerScreen(
-                            quiz: quiz,
-                            onComplete: () {},
-                          ),
-                        ));
+              const SizedBox(height: 16),
 
-                        // Preserve existing callback behavior after the quiz route returns.
-                        try {
-                          onStartQuiz(quiz);
-                        } catch (_) {}
-                      },
-                        child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(color: Theme.of(context).colorScheme.onSurface.withAlpha(25)),
-                        ),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Container(
-                              width: 52,
-                              height: 52,
-                              decoration: BoxDecoration(
-                                color: color.withAlpha((0.15 * 255).round()),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Icon(icon, color: color, size: 26),
-                            ),
+              // Additional Options
+              _buildOutlineButton(
+                context,
+                'Custom Quiz from My Notes',
+                Icons.chevron_right,
+                () => onNavigate('notes'),
+              ),
+              
+              const SizedBox(height: 12),
+              
+              _buildOutlineButton(
+                context,
+                'Random Mixed Quiz',
+                Icons.auto_awesome,
+                () {
+                  // Random mixed quiz functionality
+                },
+                iconColor: const Color(0xFF9B59B6),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
-                            const SizedBox(width: 12),
-
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      Expanded(
-                                        child: Text(
-                                          quiz['title'] as String,
-                                          style: TextStyle(fontSize: 16, color: Theme.of(context).colorScheme.onSurface),
-                                        ),
-                                      ),
-                                      if (quiz['offline'] as bool)
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color: Theme.of(context).cardColor,
-                                            borderRadius: BorderRadius.circular(10),
-                                          ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              Icon(Icons.wifi_off, size: 14, color: Theme.of(context).colorScheme.onSurface),
-                                              SizedBox(width: 6),
-                                              Text('Offline', style: TextStyle(fontSize: 12, color: AppTheme.slate)),
-                                            ],
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-
-                                  const SizedBox(height: 8),
-
-                                  Row(
-                                    crossAxisAlignment: CrossAxisAlignment.center,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Icon(Icons.adjust, size: 14, color: AppTheme.slate),
-                                          const SizedBox(width: 6),
-                                          Text('${quiz['questions']} questions', style: TextStyle(fontSize: 13, color: AppTheme.slate.withAlpha((0.9 * 255).round()))),
-                                        ],
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Text('•', style: TextStyle(color: AppTheme.slate.withAlpha((0.9 * 255).round()))),
-                                      const SizedBox(width: 8),
-                                      Row(
-                                        children: [
-                                          Icon(Icons.access_time, size: 14, color: AppTheme.slate),
-                                          const SizedBox(width: 6),
-                                          Text('${quiz['duration']} min', style: TextStyle(fontSize: 13, color: AppTheme.slate.withAlpha((0.9 * 255).round()))),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-
-                                  const SizedBox(height: 10),
-
-                                  Row(
-                                    children: [
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                                        decoration: BoxDecoration(
-                                          color: color.withAlpha((0.15 * 255).round()),
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: Text(quiz['subject'] as String, style: TextStyle(color: color, fontSize: 12)),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                                        decoration: BoxDecoration(
-                                          color: diffColor.withAlpha((0.15 * 255).round()),
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: Text(difficulty, style: TextStyle(color: diffColor, fontSize: 12)),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
+  Widget _buildCategoryCard(
+    BuildContext context,
+    String id,
+    String title,
+    String subtitle,
+    IconData icon,
+    Color gradientStart,
+    Color gradientEnd,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [gradientStart, gradientEnd],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: gradientStart.withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => SubTopicsScreen(
+                  category: id,
+                  onSelectTopic: (topic) {
+                    // Handle topic selection - you can navigate to quiz or show questions
+                    Navigator.of(context).pop(); // Go back to quiz screen
+                    onStartQuiz(topic['id'] as String);
+                  },
+                ),
+              ),
+            );
+          },
+          borderRadius: BorderRadius.circular(24),
+          child: Stack(
+            children: [
+              // Background decorations
+              Positioned(
+                top: -40,
+                right: -40,
+                child: Container(
+                  width: 128,
+                  height: 128,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(0.1),
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: -50,
+                left: -50,
+                child: Container(
+                  width: 160,
+                  height: 160,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(0.1),
+                  ),
+                ),
+              ),
+              
+              // Content
+              Padding(
+                padding: const EdgeInsets.all(32),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 64,
+                      height: 64,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Icon(
+                        icon,
+                        size: 32,
+                        color: Colors.white,
                       ),
                     ),
-                  );
-                },
+                    const SizedBox(width: 20),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            subtitle,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.white.withOpacity(0.8),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Icon(
+                      Icons.chevron_right,
+                      color: Colors.white,
+                      size: 28,
+                    ),
+                  ],
+                ),
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOutlineButton(
+    BuildContext context,
+    String label,
+    IconData icon,
+    VoidCallback onTap, {
+    Color? iconColor,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: const Color(0xFF34495E).withOpacity(0.1),
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    color: Color(0xFF34495E),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                Icon(
+                  icon,
+                  size: 20,
+                  color: iconColor ?? const Color(0xFF34495E),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

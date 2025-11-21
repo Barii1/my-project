@@ -7,10 +7,11 @@ class ProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        backgroundColor: const Color(0xFFFEF7FA),
       appBar: AppBar(
-          backgroundColor: Theme.of(context).appBarTheme.backgroundColor,
-        title: const Text('Profile'),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+        title: const Text('Profile', style: TextStyle(color: Color(0xFF1A1A1A), fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
@@ -34,12 +35,15 @@ class ProfileScreen extends StatelessWidget {
                     width: 80,
                     height: 80,
                     decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary.withAlpha(32),
+                        gradient: const LinearGradient(colors: [Color(0xFF00E5C2), Color(0xFF00A8A8)]),
                       shape: BoxShape.circle,
-                        border: Border.all(color: Theme.of(context).colorScheme.primary, width: 2),
+                        border: Border.all(color: Colors.white, width: 3),
+                        boxShadow: const [
+                          BoxShadow(color: Color(0x2000A8A8), blurRadius: 16, offset: Offset(0, 4)),
+                        ],
                     ),
-                      child: Center(
-                      child: Icon(Icons.person_outline, size: 40, color: Theme.of(context).colorScheme.primary),
+                      child: const Center(
+                      child: Icon(Icons.person_outline, size: 40, color: Colors.white),
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -47,9 +51,9 @@ class ProfileScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Student Profile', style: Theme.of(context).textTheme.titleLarge),
+                        const Text('Student Profile', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF1A1A1A), fontFamily: 'Poppins')),
                         const SizedBox(height: 4),
-                          Text('Learning since Sep 2023', style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color)),
+                          const Text('Learning since Sep 2023', style: TextStyle(fontSize: 14, color: Color(0xFF757575), fontFamily: 'Poppins')),
                       ],
                     ),
                   ),

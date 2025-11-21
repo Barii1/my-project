@@ -8,7 +8,6 @@ import 'community_modern.dart';
 import 'settings_modern.dart';
 import 'login_screen.dart';
 import 'package:provider/provider.dart';
-import '../widgets/gradient_progress_ring.dart';
 
 class HomeScreenV3 extends StatefulWidget {
   const HomeScreenV3({super.key});
@@ -22,10 +21,6 @@ class _HomeScreenV3State extends State<HomeScreenV3> with TickerProviderStateMix
 
   late AnimationController _flameController;
   late Animation<double> _flameAnimation;
-  late AnimationController _sparkleController;
-  late Animation<double> _sparkleAnimation;
-
-  final List<bool> _isTapped = [false, false, false, false];
 
   @override
   void initState() {
@@ -35,17 +30,11 @@ class _HomeScreenV3State extends State<HomeScreenV3> with TickerProviderStateMix
       vsync: this,
     )..repeat(reverse: true);
     _flameAnimation = Tween<double>(begin: 0.4, end: 0.8).animate(_flameController);
-    _sparkleController = AnimationController(
-      duration: const Duration(milliseconds: 500),
-      vsync: this,
-    )..repeat(reverse: true);
-    _sparkleAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(_sparkleController);
   }
 
   @override
   void dispose() {
     _flameController.dispose();
-    _sparkleController.dispose();
     super.dispose();
   }
 
@@ -92,7 +81,12 @@ class _HomeScreenV3State extends State<HomeScreenV3> with TickerProviderStateMix
         },
       ),
       QuizzesScreen(
-        onStartQuiz: (quiz) {},
+        onStartQuiz: (categoryId) {
+          // Handle quiz category selection
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Starting quiz for: $categoryId')),
+          );
+        },
         onNavigate: (screen) {
           if (screen == 'notes') Navigator.of(context).pushNamed('/notes');
         },
@@ -130,14 +124,14 @@ class _HomeScreenV3State extends State<HomeScreenV3> with TickerProviderStateMix
   Widget _buildHomeContent(BuildContext context, String name) {
     return SafeArea(
       child: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 24, 20, 100),
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
         children: [
           _buildWelcomeRow(name),
-          const SizedBox(height: 28),
-          _buildStreakCard(),
           const SizedBox(height: 20),
+          _buildStreakCard(),
+          const SizedBox(height: 16),
           _buildProgressRingsRow(),
-          const SizedBox(height: 32),
+          const SizedBox(height: 20),
           _buildQuickStartSection(),
         ],
       ),
@@ -145,27 +139,34 @@ class _HomeScreenV3State extends State<HomeScreenV3> with TickerProviderStateMix
   }
 
   Widget _buildWelcomeRow(String name) {
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const CircleAvatar(
-          radius: 24,
-          backgroundImage: NetworkImage('https://i.pravatar.cc/96'),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Text(
-            'Welcome back, $name',
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1A1A1A),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Welcome back, $name! 👋',
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF1A1A1A),
+              ),
             ),
-          ),
+            IconButton(
+              icon: const Icon(Icons.notifications_outlined, size: 24),
+              color: const Color(0xFF1A1A1A),
+              onPressed: () => Navigator.of(context).pushNamed('/notifications'),
+            ),
+          ],
         ),
-        IconButton(
-          icon: const Icon(Icons.notifications_outlined, size: 28),
-          color: const Color(0xFF1A1A1A),
-          onPressed: () => Navigator.of(context).pushNamed('/notifications'),
+        const SizedBox(height: 4),
+        const Text(
+          'Ready to continue learning?',
+          style: TextStyle(
+            fontSize: 14,
+            color: Color(0xFF9CA3AF),
+          ),
         ),
       ],
     );
@@ -173,56 +174,74 @@ class _HomeScreenV3State extends State<HomeScreenV3> with TickerProviderStateMix
 
   Widget _buildStreakCard() {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 24),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
-          colors: [Color(0xFF00E5C2), Color(0xFF00C4B8)],
+          colors: [Color(0xFF4DB8A8), Color(0xFF3DA89A)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(32),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: const Color(0x0A000000),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: const Color(0x15000000),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // big white flame icon
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Current Streak',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  const Text(
+                    '12',
+                    style: TextStyle(
+                      fontSize: 48,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      height: 1.0,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'days',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
           AnimatedBuilder(
             animation: _flameAnimation,
             builder: (context, child) {
-              return Opacity(
-                opacity: (_flameAnimation.value * 0.9) + 0.1,
-                child: const Icon(
-                  Icons.local_fire_department,
-                  size: 80,
-                  color: Colors.white,
+              return Transform.scale(
+                scale: 1.0 + (_flameAnimation.value * 0.1),
+                child: const Text(
+                  '🔥',
+                  style: TextStyle(fontSize: 60),
                 ),
               );
             },
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            '12 Day Streak',
-            style: TextStyle(
-              fontSize: 42,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-              height: 1.0,
-            ),
-          ),
-          const SizedBox(height: 6),
-          const Text(
-            'Keep the fire burning!',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.white,
-            ),
           ),
         ],
       ),
@@ -232,23 +251,22 @@ class _HomeScreenV3State extends State<HomeScreenV3> with TickerProviderStateMix
   Widget _buildProgressRingsRow() {
     return Row(
       children: [
-        Expanded(child: _buildProgressCard('Quiz Master', 0.80)),
+        Expanded(child: _buildDailyGoalCard()),
         const SizedBox(width: 16),
-        Expanded(child: _buildProgressCard('Note Taker', 0.60)),
+        Expanded(child: _buildTotalXpCard()),
       ],
     );
   }
 
-  Widget _buildProgressCard(String title, double progress) {
-    final percentage = (progress * 100).round();
+  Widget _buildDailyGoalCard() {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF0F5),
-        borderRadius: BorderRadius.circular(28),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: const Color(0x05000000),
+            color: const Color(0x08000000),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -257,54 +275,91 @@ class _HomeScreenV3State extends State<HomeScreenV3> with TickerProviderStateMix
       child: Column(
         children: [
           SizedBox(
-            width: 120,
-            height: 120,
+            width: 80,
+            height: 80,
             child: Stack(
               alignment: Alignment.center,
               children: [
-                GradientProgressRing(
-                  progress: progress,
-                  strokeWidth: 10,
-                  gradientColors: const [Color(0xFF00D9D9), Color(0xFF00D9D9)],
-                  backgroundColor: const Color(0xFFFFF0F5),
+                CircularProgressIndicator(
+                  value: 0.65,
+                  strokeWidth: 8,
+                  backgroundColor: const Color(0xFFE5E7EB),
+                  valueColor: const AlwaysStoppedAnimation(Color(0xFF3DA89A)),
                 ),
-                Text(
-                  '$percentage%',
-                  style: const TextStyle(
-                    fontSize: 34,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1A1A1A),
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFF3DA89A),
+                    shape: BoxShape.circle,
                   ),
+                  child: const Icon(Icons.adjust, color: Colors.white, size: 16),
                 ),
-                if (progress >= 0.8)
-                  Positioned(
-                    top: 10,
-                    right: 10,
-                    child: AnimatedBuilder(
-                      animation: _sparkleAnimation,
-                      builder: (context, child) {
-                        return Opacity(
-                          opacity: _sparkleAnimation.value,
-                          child: const Icon(
-                            Icons.star,
-                            size: 16,
-                            color: Colors.yellow,
-                          ),
-                        );
-                      },
-                    ),
-                  ),
               ],
             ),
           ),
           const SizedBox(height: 16),
-          Text(
-            title,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w500,
-              color: Color(0xFF666666),
+          const Text(
+            '65%',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1F2937),
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Daily Goal',
+            style: TextStyle(
+              fontSize: 14,
+              color: Color(0xFF6B7280),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTotalXpCard() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0x08000000),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 80,
+            height: 80,
+            decoration: const BoxDecoration(
+              color: Color(0xFFFEF3C7),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.flash_on, color: Color(0xFFF59E0B), size: 40),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            '3,420',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1F2937),
+            ),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Total XP',
+            style: TextStyle(
+              fontSize: 14,
+              color: Color(0xFF6B7280),
             ),
           ),
         ],
@@ -316,27 +371,373 @@ class _HomeScreenV3State extends State<HomeScreenV3> with TickerProviderStateMix
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Quick Start',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF1A1A1A),
+        _buildSubjectAccuracyCard(),
+        const SizedBox(height: 20),
+        _buildWeeklyProgressGraph(),
+        const SizedBox(height: 20),
+        _buildRecentBadgesCard(),
+        const SizedBox(height: 20),
+        _buildQuickStartActionsCard(),
+      ],
+    );
+  }
+
+  Widget _buildSubjectAccuracyCard() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0x08000000),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Subject Accuracy',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1F2937),
+            ),
+          ),
+          const SizedBox(height: 20),
+          _buildSubjectRow('Computer Science', 78, const Color(0xFF3B82F6)),
+          const SizedBox(height: 16),
+          _buildSubjectRow('Mathematics', 85, const Color(0xFF10B981)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSubjectRow(String subject, int percentage, Color color) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              subject,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Color(0xFF6B7280),
+              ),
+            ),
+            Text(
+              '$percentage%',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: percentage / 100,
+            minHeight: 8,
+            backgroundColor: const Color(0xFFE5E7EB),
+            valueColor: AlwaysStoppedAnimation(color),
           ),
         ),
-        const SizedBox(height: 20),
-        GridView.count(
-          crossAxisCount: 2,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          children: [
-            _buildQuickStartCard(0, 'Daily Quiz', Icons.quiz_outlined, () => Navigator.of(context).pushNamed('/dailyQuiz')),
-            _buildQuickStartCard(1, 'Flashcards', Icons.style_outlined, () => Navigator.of(context).pushNamed('/flashcards')),
-            _buildQuickStartCard(2, 'Practice', Icons.psychology_outlined, () => Navigator.of(context).pushNamed('/practice')),
-            _buildQuickStartCard(3, 'Notes', Icons.note_alt_outlined, () => Navigator.of(context).pushNamed('/notes')),
-          ],
+      ],
+    );
+  }
+
+  Widget _buildWeeklyProgressGraph() {
+    // Sample data for the week - hours studied per day
+    final weekData = [2.5, 3.0, 1.5, 4.0, 3.5, 2.0, 3.8];
+    final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    final maxHours = 5.0;
+    
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0x08000000),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Weekly Progress',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1F2937),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF10B981).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text(
+                  '20.3 hrs',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF10B981),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Hours studied this week',
+            style: TextStyle(
+              fontSize: 12,
+              color: Color(0xFF9CA3AF),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: List.generate(7, (index) {
+              final height = (weekData[index] / maxHours) * 120;
+              final isToday = index == 6; // Sunday is today
+              
+              return GestureDetector(
+                onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('${days[index]}: ${weekData[index]} hours'),
+                      duration: const Duration(seconds: 1),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                },
+                child: Column(
+                  children: [
+                    Text(
+                      weekData[index].toString(),
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        color: isToday ? const Color(0xFF3DA89A) : const Color(0xFF9CA3AF),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      width: 32,
+                      height: height,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: isToday 
+                            ? [const Color(0xFF4DB8A8), const Color(0xFF3DA89A)]
+                            : [const Color(0xFFE5E7EB), const Color(0xFFD1D5DB)],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      days[index],
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: isToday ? FontWeight.w600 : FontWeight.normal,
+                        color: isToday ? const Color(0xFF3DA89A) : const Color(0xFF6B7280),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickStartActionsCard() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0x08000000),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Quick Start',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF1F2937),
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildQuickActionButton(
+            icon: Icons.quiz_outlined,
+            label: 'Daily Quiz',
+            color: const Color(0xFF3B82F6),
+            onTap: () => Navigator.of(context).pushNamed('/dailyQuiz'),
+          ),
+          const SizedBox(height: 12),
+          _buildQuickActionButton(
+            icon: Icons.style_outlined,
+            label: 'Review Flashcards',
+            color: const Color(0xFF8B5CF6),
+            onTap: () => Navigator.of(context).pushNamed('/flashcards'),
+          ),
+          const SizedBox(height: 12),
+          _buildQuickActionButton(
+            icon: Icons.note_alt_outlined,
+            label: 'New Note',
+            color: const Color(0xFF10B981),
+            onTap: () => Navigator.of(context).pushNamed('/notes'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickActionButton({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: color.withOpacity(0.2), width: 1),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: color, size: 24),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: color,
+                  ),
+                ),
+              ),
+              Icon(Icons.arrow_forward_ios, color: color, size: 16),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecentBadgesCard() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0x08000000),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Recent Badges',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1F2937),
+                ),
+              ),
+              const Icon(Icons.emoji_events, color: Color(0xFF10B981), size: 24),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _buildBadge('7-day Streak', Icons.local_fire_department, const Color(0xFFFFA726)),
+              _buildBadge('Quiz Master', Icons.emoji_events, const Color(0xFFFFD700)),
+              _buildBadge('Note Taker', Icons.note_alt, const Color(0xFF3B82F6)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBadge(String label, IconData icon, Color color) {
+    return Column(
+      children: [
+        Container(
+          width: 56,
+          height: 56,
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.1),
+            shape: BoxShape.circle,
+            border: Border.all(color: color, width: 2),
+          ),
+          child: Icon(icon, color: color, size: 28),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 11,
+            color: Color(0xFF6B7280),
+          ),
         ),
       ],
     );
@@ -409,74 +810,6 @@ class _HomeScreenV3State extends State<HomeScreenV3> with TickerProviderStateMix
             ),
           ),
         ],
-      ),
-    );
-  }
-  Widget _buildQuickStartCard(int index, String label, IconData icon, VoidCallback onPressed) {
-    return GestureDetector(
-      onTapDown: (_) {
-        setState(() {
-          _isTapped[index] = true;
-        });
-      },
-      onTapUp: (_) {
-        setState(() {
-          _isTapped[index] = false;
-        });
-        onPressed();
-      },
-      onTapCancel: () {
-        setState(() {
-          _isTapped[index] = false;
-        });
-      },
-      child: SizedBox(
-        width: 150,
-        height: 120,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 150),
-          transform: (() {
-            final y = _isTapped[index] ? -6.0 : 0.0;
-            final s = _isTapped[index] ? 0.985 : 1.0;
-            final m = Matrix4.translationValues(0, y, 0);
-            m.multiply(Matrix4.diagonal3Values(s, s, s));
-            return m;
-          })(),
-          decoration: BoxDecoration(
-            color: const Color(0xFFFCE4EC),
-            borderRadius: BorderRadius.circular(28),
-            border: Border.all(
-              color: const Color(0xFFFFB6C2),
-              width: 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0x05000000),
-                blurRadius: 6,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 56,
-                color: const Color(0xFF00A3A3),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                label,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
-                  color: Color(0xFF1A1A1A),
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

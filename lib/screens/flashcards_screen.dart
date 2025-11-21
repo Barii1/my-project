@@ -56,12 +56,12 @@ class _FlashcardsScreenState extends State<FlashcardsScreen> with SingleTickerPr
   Widget build(BuildContext context) {
     final appFlashcards = Provider.of<AppStateProvider>(context).flashcards;
     final activeCards = appFlashcards.isNotEmpty ? appFlashcards : sampleCards;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (selectedDeck != null) {
       final progress = ((currentCard + 1) / activeCards.length) * 100;
 
       return Scaffold(
+        backgroundColor: const Color(0xFFFEF7FA),
         body: SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(24, 32, 24, 96),
@@ -111,10 +111,8 @@ class _FlashcardsScreenState extends State<FlashcardsScreen> with SingleTickerPr
                       borderRadius: BorderRadius.circular(4),
                       child: LinearProgressIndicator(
                         value: progress / 100,
-                        backgroundColor: isDark
-                                    ? Colors.white.withAlpha((0.1 * 255).round())
-                                    : Theme.of(context).colorScheme.onSurface.withAlpha((0.1 * 255).round()),
-                        valueColor: AlwaysStoppedAnimation(AppTheme.primary),
+                        backgroundColor: const Color(0x1A000000),
+                        valueColor: const AlwaysStoppedAnimation(Color(0xFF00A8A8)),
                         minHeight: 8,
                       ),
                     ),
@@ -211,10 +209,8 @@ class _FlashcardsScreenState extends State<FlashcardsScreen> with SingleTickerPr
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          side: BorderSide(
-                            color: isDark
-                                ? Colors.white.withAlpha((0.2 * 255).round())
-                                : Theme.of(context).colorScheme.onSurface.withAlpha((0.2 * 255).round()),
+                          side: const BorderSide(
+                            color: Color(0x33000000),
                           ),
                         ),
                       ),
@@ -310,9 +306,7 @@ class _FlashcardsScreenState extends State<FlashcardsScreen> with SingleTickerPr
                         color: Theme.of(context).cardColor,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: isDark
-                ? Colors.white.withAlpha((0.1 * 255).round())
-                : Theme.of(context).colorScheme.onSurface.withAlpha((0.1 * 255).round()),
+                          color: const Color(0x1A000000),
                         ),
                       ),
                       child: Column(
@@ -425,10 +419,8 @@ class _FlashcardsScreenState extends State<FlashcardsScreen> with SingleTickerPr
                             borderRadius: BorderRadius.circular(4),
                             child: LinearProgressIndicator(
                               value: masteredPercentage / 100,
-                backgroundColor: isDark
-                  ? Colors.white.withAlpha((0.1 * 255).round())
-                  : Theme.of(context).colorScheme.onSurface.withAlpha((0.1 * 255).round()),
-                              valueColor: AlwaysStoppedAnimation(AppTheme.primary),
+                              backgroundColor: const Color(0x1A000000),
+                              valueColor: const AlwaysStoppedAnimation(Color(0xFF00A8A8)),
                               minHeight: 8,
                             ),
                           ),

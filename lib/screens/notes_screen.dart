@@ -112,7 +112,6 @@ class _NotesScreenState extends State<NotesScreen>
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Flashcards created from note')));
     }
-    // Optionally navigate to flashcards screen
     Navigator.of(context).pushNamed('/flashcards');
   }
 
@@ -127,9 +126,8 @@ class _NotesScreenState extends State<NotesScreen>
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Scaffold(
+      backgroundColor: const Color(0xFFFEF7FA),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(24, 28, 24, 96),
@@ -174,10 +172,10 @@ class _NotesScreenState extends State<NotesScreen>
                   size: 16, color: AppTheme.secondary),
                                 const SizedBox(width: 8),
                                 Text('Saved ${_formatTime(_lastSaved!)}',
-                                    style: TextStyle(fontSize: 12, color: (isDark ? Colors.white70 : Colors.black54))),
+                                    style: const TextStyle(fontSize: 12, color: Color(0xFF757575), fontFamily: 'Poppins')),
                               ] else ...[
-                                Text('Start typing to auto-save',
-                                    style: TextStyle(fontSize: 12, color: (isDark ? Colors.white70 : Colors.black54))),
+                                const Text('Start typing to auto-save',
+                                    style: TextStyle(fontSize: 12, color: Color(0xFF757575), fontFamily: 'Poppins')),
                               ]
                             ],
                           ),

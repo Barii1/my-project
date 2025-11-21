@@ -126,14 +126,14 @@ class _QuizTakerScreenState extends State<QuizTakerScreen> {
     final progress = ((_currentQuestion + 1) / _questions.length) * 100;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: const Color(0xFFFEF7FA),
       body: Stack(
         children: [
           Column(
             children: [
               // Header
               Container(
-                color: Theme.of(context).appBarTheme.backgroundColor,
+                color: Colors.transparent,
                 padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                 child: SafeArea(
                   bottom: false,
@@ -142,19 +142,18 @@ class _QuizTakerScreenState extends State<QuizTakerScreen> {
                     children: [
                       IconButton(
                         onPressed: () {
-                          // Close the quiz screen and then call the optional onComplete handler.
                           Navigator.of(context).maybePop();
                           try {
                             widget.onComplete();
                           } catch (_) {}
                         },
-                        icon: Icon(Icons.close, color: Theme.of(context).colorScheme.primary),
+                        icon: const Icon(Icons.close, color: Color(0xFF00A8A8)),
                       ),
                       Row(
                         children: [
-                          const Icon(Icons.access_time, size: 18),
+                          const Icon(Icons.access_time, size: 18, color: Color(0xFF757575)),
                           const SizedBox(width: 6),
-                          Text(_formatTime(_timeLeftSeconds), style: const TextStyle(fontWeight: FontWeight.w600)),
+                          Text(_formatTime(_timeLeftSeconds), style: const TextStyle(fontWeight: FontWeight.w600, fontFamily: 'Poppins', color: Color(0xFF1A1A1A))),
                         ],
                       )
                     ],
@@ -164,15 +163,15 @@ class _QuizTakerScreenState extends State<QuizTakerScreen> {
 
               // Progress
               Container(
-                color: Theme.of(context).appBarTheme.backgroundColor,
+                color: Colors.transparent,
                 padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                 child: Column(
                   children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Question ${_currentQuestion + 1} of ${_questions.length}', style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color)),
-                        Text('${progress.round()}%', style: TextStyle(color: Theme.of(context).colorScheme.primary)),
+                        Text('Question ${_currentQuestion + 1} of ${_questions.length}', style: const TextStyle(color: Color(0xFF757575), fontFamily: 'Poppins')),
+                        Text('${progress.round()}%', style: const TextStyle(color: Color(0xFF00A8A8), fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -181,8 +180,8 @@ class _QuizTakerScreenState extends State<QuizTakerScreen> {
                       child: LinearProgressIndicator(
                         minHeight: 8,
                         value: progress / 100.0,
-                        color: Theme.of(context).colorScheme.primary,
-                        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                        color: const Color(0xFF00D9D9),
+                        backgroundColor: const Color(0x1A000000),
                       ),
                     ),
                   ],
@@ -216,10 +215,10 @@ class _QuizTakerScreenState extends State<QuizTakerScreen> {
                             margin: const EdgeInsets.only(bottom: 10),
                             child: OutlinedButton(
                               style: OutlinedButton.styleFrom(
-                                backgroundColor: selected ? Theme.of(context).colorScheme.primary.withAlpha(30) : Theme.of(context).cardColor,
-                                side: BorderSide(color: selected ? Theme.of(context).colorScheme.primary : const Color(0xFF34495E).withAlpha(25)),
+                                backgroundColor: selected ? const Color(0x1A00A8A8) : Colors.white,
+                                side: BorderSide(color: selected ? const Color(0xFF00A8A8) : const Color(0xFFFFE6ED)),
                                 padding: const EdgeInsets.all(16),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                               ),
                               onPressed: () => _selectAnswer(index),
                               child: Row(
@@ -229,15 +228,15 @@ class _QuizTakerScreenState extends State<QuizTakerScreen> {
                                     height: 24,
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
-                                      color: selected ? Theme.of(context).colorScheme.primary : Colors.transparent,
-                                      border: Border.all(color: selected ? Theme.of(context).colorScheme.primary : const Color(0xFF34495E).withAlpha(30)),
+                                      color: selected ? const Color(0xFF00A8A8) : Colors.transparent,
+                                      border: Border.all(color: selected ? const Color(0xFF00A8A8) : const Color(0x4D000000)),
                                     ),
                                     child: selected
                                         ? const Icon(Icons.check, size: 14, color: Colors.white)
                                         : null,
                                   ),
                                   const SizedBox(width: 12),
-                                  Expanded(child: Text(optionText, style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color))),
+                                  Expanded(child: Text(optionText, style: const TextStyle(color: Color(0xFF1A1A1A), fontFamily: 'Poppins', fontSize: 14))),
                                 ],
                               ),
                             ),
