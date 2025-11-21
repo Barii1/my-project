@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 typedef CourseCallback = void Function(String course);
-
 typedef NavigateCallback = void Function(String screen);
 
 class AITutorScreen extends StatelessWidget {
@@ -11,12 +10,12 @@ class AITutorScreen extends StatelessWidget {
   const AITutorScreen({super.key, required this.onSelectCourse, required this.onNavigate});
 
   static const _courses = <Map<String, Object>>[
-    {'id': 'data-structures', 'name': 'Data Structures', 'icon': Icons.storage},
-    {'id': 'algorithms', 'name': 'Algorithms', 'icon': Icons.device_hub},
-    {'id': 'calculus', 'name': 'Calculus', 'icon': Icons.functions},
-    {'id': 'linear-algebra', 'name': 'Linear Algebra', 'icon': Icons.calculate},
-    {'id': 'discrete-math', 'name': 'Discrete Math', 'icon': Icons.code},
-    {'id': 'computer-architecture', 'name': 'Architecture', 'icon': Icons.memory},
+    {'id': 'data-structures', 'name': 'Data Structures', 'icon': Icons.storage, 'color': Color(0xFF3B82F6)},
+    {'id': 'algorithms', 'name': 'Algorithms', 'icon': Icons.device_hub, 'color': Color(0xFF8B5CF6)},
+    {'id': 'calculus', 'name': 'Calculus', 'icon': Icons.functions, 'color': Color(0xFF10B981)},
+    {'id': 'linear-algebra', 'name': 'Linear Algebra', 'icon': Icons.calculate, 'color': Color(0xFFF59E0B)},
+    {'id': 'discrete-math', 'name': 'Discrete Math', 'icon': Icons.code, 'color': Color(0xFFEC4899)},
+    {'id': 'databases', 'name': 'Databases', 'icon': Icons.folder, 'color': Color(0xFF06B6D4)},
   ];
 
   @override
@@ -24,167 +23,357 @@ class AITutorScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFFEF7FA),
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('AI Tutor', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF1A1A1A), fontFamily: 'Poppins')),
-                            const SizedBox(height: 6),
-                            const Text('Get instant help with any topic', style: TextStyle(fontSize: 14, color: Color(0xFF757575), fontFamily: 'Poppins')),
-                          ],
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                const Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                'AI Tutor',
+                                style: TextStyle(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF34495E),
+                                ),
+                              ),
+                              SizedBox(width: 8),
+                              Text(
+                                '✨',
+                                style: TextStyle(fontSize: 24),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'Your personal learning assistant',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
+                  ],
+                ),
+
+                const SizedBox(height: 24),
+
+                // Quick Start Card
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF4DB8A8), Color(0xFF3DA89A)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF4DB8A8).withOpacity(0.3),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
                   ),
-                  // decorative image
-                  SizedBox(
-                    width: 56,
-                    height: 56,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(12),
-                      child: Image.network(
-                        'https://images.unsplash.com/photo-1526378724497-7f2d6f0d3f5f?q=80&w=800&auto=format&fit=crop&ixlib=rb-4.0.3&s=placeholder',
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => Container(color: Theme.of(context).colorScheme.surface),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () {},
+                      borderRadius: BorderRadius.circular(24),
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 56,
+                              height: 56,
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: const Icon(
+                                Icons.chat_bubble_outline,
+                                color: Colors.white,
+                                size: 28,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            const Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Ask me anything!',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  SizedBox(height: 4),
+                                  Text(
+                                    'Start a conversation',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(
+                              Icons.arrow_forward,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ],
-              ),
+                ),
 
-              const SizedBox(height: 18),
+                const SizedBox(height: 32),
 
-              // Recent chats
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Recent Chats', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF1A1A1A), fontFamily: 'Poppins')),
-                  TextButton(
-                    onPressed: () => onNavigate('history'),
-                    style: TextButton.styleFrom(foregroundColor: const Color(0xFF00A8A8)),
-                    child: const Text('View All', style: TextStyle(fontFamily: 'Poppins')),
+                // Recent Chats Section
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Recent Chats',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF34495E),
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () => onNavigate('history'),
+                      child: const Text(
+                        'View All',
+                        style: TextStyle(
+                          color: Color(0xFF3DA89A),
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 12),
+
+                _recentChatTile(
+                  context,
+                  'Binary Search Trees',
+                  'Data Structures',
+                  '2h ago',
+                  Icons.storage,
+                  const Color(0xFF3B82F6),
+                ),
+                const SizedBox(height: 10),
+                _recentChatTile(
+                  context,
+                  'Integration by Parts',
+                  'Calculus',
+                  'Yesterday',
+                  Icons.functions,
+                  const Color(0xFF10B981),
+                ),
+
+                const SizedBox(height: 32),
+
+                // Subjects Grid
+                const Text(
+                  'Choose a Subject',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF34495E),
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(height: 16),
 
-              const SizedBox(height: 8),
-              Column(
-                children: [
-                  _recentChatTile(context, 'Data Structures', 'Binary Search Trees', '2h ago'),
-                  const SizedBox(height: 8),
-                  _recentChatTile(context, 'Calculus', 'Integration by Parts', 'Yesterday'),
-                ],
-              ),
-
-              const SizedBox(height: 18),
-
-              const Text('Select a Course', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Color(0xFF1A1A1A), fontFamily: 'Poppins')),
-              const SizedBox(height: 12),
-
-              // Course grid
-              Expanded(
-                child: GridView.builder(
-                  physics: const BouncingScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, childAspectRatio: 1.25, crossAxisSpacing: 12, mainAxisSpacing: 12),
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    childAspectRatio: 1.15,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                  ),
                   itemCount: _courses.length,
                   itemBuilder: (context, index) {
                     final item = _courses[index];
                     final icon = item['icon'] as IconData;
                     final name = item['name'] as String;
+                    final color = item['color'] as Color;
 
-                    return Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(32),
-                        border: Border.all(color: const Color(0xFFFFE6ED), width: 1),
-                        boxShadow: const [
-                          BoxShadow(color: Color(0x10000000), blurRadius: 10, offset: Offset(0, 4)),
-                        ],
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(32),
-                          onTap: () => onSelectCourse(name),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Container(
-                                  width: 56,
-                                  height: 56,
-                                  decoration: BoxDecoration(color: const Color(0xFFE6F7F7), borderRadius: BorderRadius.circular(16)),
-                                  child: Icon(icon, color: const Color(0xFF00A3A3), size: 28),
-                                ),
-                                const SizedBox(height: 12),
-                                Text(name, style: const TextStyle(fontSize: 14, color: Color(0xFF1A1A1A), fontWeight: FontWeight.w600, fontFamily: 'Poppins')),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    );
+                    return _buildCourseCard(context, icon, name, color);
                   },
                 ),
-              ),
-            ],
+
+                const SizedBox(height: 80),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _recentChatTile(BuildContext context, String course, String topic, String time) {
+  Widget _buildCourseCard(BuildContext context, IconData icon, String name, Color color) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0xFFFFE6ED), width: 1),
-        boxShadow: const [
-          BoxShadow(color: Color(0x08000000), blurRadius: 8, offset: Offset(0, 2)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
         ],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(20),
+          onTap: () => onSelectCourse(name),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Icon(icon, color: color, size: 28),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  name,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    color: Color(0xFF34495E),
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _recentChatTile(
+    BuildContext context,
+    String topic,
+    String course,
+    String time,
+    IconData icon,
+    Color color,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFFFE6ED), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(16),
           onTap: () => onSelectCourse(course),
           child: Padding(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(16),
             child: Row(
               children: [
                 Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(color: const Color(0xFFE6F7F7), borderRadius: BorderRadius.circular(10)),
-                  child: const Icon(Icons.message, color: Color(0xFF00A8A8)),
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(icon, color: color, size: 24),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 14),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(topic, style: const TextStyle(fontWeight: FontWeight.w600, fontFamily: 'Poppins', fontSize: 14, color: Color(0xFF1A1A1A))),
+                      Text(
+                        topic,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                          color: Color(0xFF34495E),
+                        ),
+                      ),
                       const SizedBox(height: 4),
                       Row(
                         children: [
-                          Text(course, style: const TextStyle(color: Color(0xFF757575), fontSize: 12, fontFamily: 'Poppins')),
+                          Text(
+                            course,
+                            style: const TextStyle(
+                              color: Color(0xFF94A3B8),
+                              fontSize: 13,
+                            ),
+                          ),
                           const SizedBox(width: 6),
-                          const Text('•', style: TextStyle(color: Color(0xFF757575), fontSize: 12)),
+                          const Text(
+                            '•',
+                            style: TextStyle(
+                              color: Color(0xFF94A3B8),
+                              fontSize: 13,
+                            ),
+                          ),
                           const SizedBox(width: 6),
-                          Row(children: [const Icon(Icons.access_time, size: 12, color: Color(0xFF757575)), const SizedBox(width: 4), Text(time, style: const TextStyle(fontSize: 12, color: Color(0xFF999999), fontFamily: 'Poppins'))])
+                          Text(
+                            time,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFF94A3B8),
+                            ),
+                          ),
                         ],
-                      )
+                      ),
                     ],
                   ),
-                )
+                ),
+                const Icon(
+                  Icons.chevron_right,
+                  color: Color(0xFFD1D5DB),
+                  size: 20,
+                ),
               ],
             ),
           ),

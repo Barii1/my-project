@@ -14,7 +14,7 @@ class QuizzesScreen extends StatelessWidget {
     {
       'id': 'computer-science',
       'title': 'Computer Science',
-      'subtitle': '15 topics • 450+ questions',
+      'subtitle': '13 topics • 400+ questions',
       'icon': Icons.psychology,
       'color': const Color(0xFF2980B9),
       'gradientStart': const Color(0xFF2980B9),
@@ -23,7 +23,7 @@ class QuizzesScreen extends StatelessWidget {
     {
       'id': 'mathematics',
       'title': 'Mathematics',
-      'subtitle': '12 topics • 380+ questions',
+      'subtitle': '10 topics • 330+ questions',
       'icon': Icons.calculate,
       'color': const Color(0xFF16A085),
       'gradientStart': const Color(0xFF16A085),
@@ -32,7 +32,7 @@ class QuizzesScreen extends StatelessWidget {
     {
       'id': 'general-knowledge',
       'title': 'General Knowledge',
-      'subtitle': 'Fun • Mixed topics',
+      'subtitle': '3 topics • 120+ questions',
       'icon': Icons.auto_awesome,
       'color': const Color(0xFF9B59B6),
       'gradientStart': const Color(0xFF9B59B6),
@@ -173,15 +173,11 @@ class QuizzesScreen extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: () {
+            // Navigate to sub topics; quiz starts from topic screen directly now.
             Navigator.of(context).push(
               MaterialPageRoute(
                 builder: (_) => SubTopicsScreen(
                   category: id,
-                  onSelectTopic: (topic) {
-                    // Handle topic selection - you can navigate to quiz or show questions
-                    Navigator.of(context).pop(); // Go back to quiz screen
-                    onStartQuiz(topic['id'] as String);
-                  },
                 ),
               ),
             );

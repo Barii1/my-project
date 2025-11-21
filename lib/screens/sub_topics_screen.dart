@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
-
-typedef SelectTopicCallback = void Function(Map<String, dynamic> topic);
+import 'topic_quiz_screen.dart';
 
 class SubTopicsScreen extends StatelessWidget {
   final String category;
-  final SelectTopicCallback onSelectTopic;
 
   const SubTopicsScreen({
     super.key,
     required this.category,
-    required this.onSelectTopic,
   });
 
   static final List<Map<String, dynamic>> _csTopics = [
@@ -240,16 +237,16 @@ class SubTopicsScreen extends StatelessWidget {
         categoryData['topics'] as List<Map<String, dynamic>>;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFC),
+      backgroundColor: const Color(0xFFFEF7FA),
       body: Column(
         children: [
           // Header
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
-              border: Border(
+              border: const Border(
                 bottom: BorderSide(
-                  color: const Color(0xFF34495E).withOpacity(0.1),
+                  color: Color(0xFFFFE6ED),
                   width: 1,
                 ),
               ),
@@ -363,7 +360,13 @@ class SubTopicsScreen extends StatelessWidget {
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            onTap: () => onSelectTopic(topic),
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => TopicQuizScreen(topic: topic),
+                ),
+              );
+            },
             borderRadius: BorderRadius.circular(16),
             child: Padding(
               padding: const EdgeInsets.all(20),
