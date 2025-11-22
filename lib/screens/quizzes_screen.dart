@@ -5,11 +5,27 @@ import 'mixed_quiz_screen.dart';
 typedef StartQuizCallback = void Function(String categoryId);
 typedef NavigateCallback = void Function(String screen);
 
-class QuizzesScreen extends StatelessWidget {
+class QuizzesScreen extends StatefulWidget {
   final StartQuizCallback onStartQuiz;
   final NavigateCallback onNavigate;
 
   const QuizzesScreen({super.key, required this.onStartQuiz, required this.onNavigate});
+
+  @override
+  State<QuizzesScreen> createState() => _QuizzesScreenState();
+}
+
+class _QuizzesScreenState extends State<QuizzesScreen> {
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    // Simulate brief load to show skeletons
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) setState(() => _loading = false);
+    });
+  }
 
   static final List<Map<String, dynamic>> _categories = [
     {
@@ -105,6 +121,12 @@ class QuizzesScreen extends StatelessWidget {
               // Category Cards
               ...List.generate(_categories.length, (index) {
                 final category = _categories[index];
+                if (_loading) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: _CategorySkeleton(isDark: isDark),
+                  );
+                }
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 16),
                   child: _buildCategoryCard(
@@ -126,7 +148,7 @@ class QuizzesScreen extends StatelessWidget {
                 context,
                 'Custom Quiz from My Notes',
                 Icons.chevron_right,
-                () => onNavigate('notes'),
+                () => widget.onNavigate('notes'),
               ),
               
               const SizedBox(height: 12),
@@ -319,6 +341,28 @@ class QuizzesScreen extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _CategorySkeleton extends StatelessWidget {
+  final bool isDark;
+  const _CategorySkeleton({required this.isDark});
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 140,
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF222B45) : Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: isDark ? const Color(0xFF2A2E45) : const Color(0xFFE5E7EB)),
+      ),
+      child: Row(
+        children: const [
+          SizedBox(width: 32),
+          // Simple animated shimmer using opacity loop via AnimatedOpacity could be added later.
+        ],
       ),
     );
   }

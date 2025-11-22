@@ -9,9 +9,26 @@ import 'friends_screen.dart';
 import 'add_friend_screen.dart';
 import 'package:provider/provider.dart';
 import '../providers/social_provider.dart';
+import '../widgets/skeleton.dart';
 
-class CommunityModernScreen extends StatelessWidget {
+class CommunityModernScreen extends StatefulWidget {
   const CommunityModernScreen({super.key});
+
+  @override
+  State<CommunityModernScreen> createState() => _CommunityModernScreenState();
+}
+
+class _CommunityModernScreenState extends State<CommunityModernScreen> {
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    // Simulate brief initial load for skeletons
+    Future.delayed(const Duration(milliseconds: 600), () {
+      if (mounted) setState(() => _loading = false);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -223,7 +240,14 @@ class CommunityModernScreen extends StatelessWidget {
                       ),
                     ),
                     SizedBox(height: 16),
-                    _CommunityPost(
+                    if (_loading) ...[
+                      const _PostSkeleton(),
+                      const SizedBox(height: 12),
+                      const _PostSkeleton(),
+                      const SizedBox(height: 12),
+                      const _PostSkeleton(),
+                    ] else ...[
+                      _CommunityPost(
                       postId: 'post1',
                       author: 'Alex Morgan',
                       time: '3h ago',
@@ -252,6 +276,7 @@ class CommunityModernScreen extends StatelessWidget {
                       comments: 15,
                       hasImage: false,
                     ),
+                    ],
                     SizedBox(height: 80),
                   ],
                 ),
@@ -500,6 +525,40 @@ class _CommunityPost extends StatelessWidget {
         ],
       ),
     ),
+    );
+  }
+}
+
+class _PostSkeleton extends StatelessWidget {
+  const _PostSkeleton();
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF16213E) : Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: isDark ? const Color(0xFF2A2E45) : const Color(0xFFFFE6ED), width: 1),
+      ),
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: const [
+          Row(
+            children: [
+              Skeleton(width: 44, height: 44, borderRadius: BorderRadius.all(Radius.circular(22))),
+              SizedBox(width: 12),
+              Expanded(child: Skeleton(width: double.infinity, height: 16)),
+            ],
+          ),
+          SizedBox(height: 12),
+          Skeleton(width: double.infinity, height: 14),
+          SizedBox(height: 8),
+          Skeleton(width: double.infinity, height: 14),
+          SizedBox(height: 8),
+          Skeleton(width: 150, height: 14),
+        ],
+      ),
     );
   }
 }
