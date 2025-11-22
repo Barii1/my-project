@@ -231,22 +231,23 @@ class SubTopicsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final categoryData = _getCategoryData();
     final String title = categoryData['title'] as String;
     final List<Map<String, dynamic>> topics =
         categoryData['topics'] as List<Map<String, dynamic>>;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFEF7FA),
+      backgroundColor: isDark ? const Color(0xFF1A1A2E) : const Color(0xFFFEF7FA),
       body: Column(
         children: [
           // Header
           Container(
             decoration: BoxDecoration(
-              color: Colors.white,
-              border: const Border(
+              color: isDark ? const Color(0xFF16213E) : Colors.white,
+              border: Border(
                 bottom: BorderSide(
-                  color: Color(0xFFFFE6ED),
+                  color: isDark ? const Color(0xFF2A2E45) : const Color(0xFFFFE6ED),
                   width: 1,
                 ),
               ),
@@ -325,6 +326,7 @@ class SubTopicsScreen extends StatelessWidget {
 
   Widget _buildTopicCard(
       BuildContext context, Map<String, dynamic> topic, int index) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final IconData icon = topic['icon'] as IconData;
     final Color color = topic['color'] as Color;
     final String name = topic['name'] as String;
@@ -344,10 +346,10 @@ class SubTopicsScreen extends StatelessWidget {
       },
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: isDark ? const Color(0xFF16213E) : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: const Color(0xFF34495E).withOpacity(0.1),
+            color: isDark ? const Color(0xFF2A2E45) : const Color(0xFF34495E).withOpacity(0.1),
           ),
           boxShadow: [
             BoxShadow(
@@ -393,10 +395,10 @@ class SubTopicsScreen extends StatelessWidget {
                   // Topic Name
                   Text(
                     name,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF34495E),
+                      color: isDark ? Colors.white : const Color(0xFF34495E),
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -406,9 +408,9 @@ class SubTopicsScreen extends StatelessWidget {
                   // Questions Count
                   Text(
                     '$questions questions',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
-                      color: Color(0xFF64748B),
+                      color: isDark ? Colors.white70 : const Color(0xFF64748B),
                     ),
                   ),
                 ],

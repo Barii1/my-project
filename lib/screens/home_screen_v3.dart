@@ -5,7 +5,11 @@ import 'ai_chat_screen.dart';
 import 'history_screen.dart';
 import 'quizzes_screen.dart';
 import 'community_modern.dart';
-import 'settings_modern.dart';
+import 'friends_screen.dart';
+import 'add_friend_screen.dart';
+import 'community_user_profile.dart';
+import '../providers/social_provider.dart';
+import 'settings_screen_modern.dart';
 import 'login_screen.dart';
 import 'package:provider/provider.dart';
 
@@ -92,7 +96,7 @@ class _HomeScreenV3State extends State<HomeScreenV3> with TickerProviderStateMix
         },
       ),
       const CommunityModernScreen(),
-      SettingsModernScreen(
+      SettingsScreenModern(
         user: user,
         onLogout: () async {
           await authProvider.logout();
@@ -105,8 +109,10 @@ class _HomeScreenV3State extends State<HomeScreenV3> with TickerProviderStateMix
       ),
     ];
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Scaffold(
-      backgroundColor: const Color(0xFFFEF7FA),
+      backgroundColor: isDark ? const Color(0xFF1A1A2E) : const Color(0xFFFEF7FA),
       body: Stack(
         children: [
           IndexedStack(index: _selectedIndex, children: pages),
@@ -132,6 +138,8 @@ class _HomeScreenV3State extends State<HomeScreenV3> with TickerProviderStateMix
           const SizedBox(height: 16),
           _buildProgressRingsRow(),
           const SizedBox(height: 20),
+          _buildFriendsSection(),
+          const SizedBox(height: 20),
           _buildQuickStartSection(),
         ],
       ),
@@ -139,6 +147,8 @@ class _HomeScreenV3State extends State<HomeScreenV3> with TickerProviderStateMix
   }
 
   Widget _buildWelcomeRow(String name) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -147,25 +157,25 @@ class _HomeScreenV3State extends State<HomeScreenV3> with TickerProviderStateMix
           children: [
             Text(
               'Welcome back, $name! 👋',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 24,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF1A1A1A),
+                color: isDark ? Colors.white : const Color(0xFF1A1A1A),
               ),
             ),
             IconButton(
               icon: const Icon(Icons.notifications_outlined, size: 24),
-              color: const Color(0xFF1A1A1A),
+              color: isDark ? Colors.white : const Color(0xFF1A1A1A),
               onPressed: () => Navigator.of(context).pushNamed('/notifications'),
             ),
           ],
         ),
         const SizedBox(height: 4),
-        const Text(
+        Text(
           'Ready to continue learning?',
           style: TextStyle(
             fontSize: 14,
-            color: Color(0xFF9CA3AF),
+            color: isDark ? Colors.white70 : const Color(0xFF9CA3AF),
           ),
         ),
       ],
@@ -259,11 +269,14 @@ class _HomeScreenV3State extends State<HomeScreenV3> with TickerProviderStateMix
   }
 
   Widget _buildDailyGoalCard() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF16213E) : Colors.white,
         borderRadius: BorderRadius.circular(20),
+        border: isDark ? Border.all(color: const Color(0xFF2A2E45)) : null,
         boxShadow: [
           BoxShadow(
             color: const Color(0x08000000),
@@ -283,7 +296,7 @@ class _HomeScreenV3State extends State<HomeScreenV3> with TickerProviderStateMix
                 CircularProgressIndicator(
                   value: 0.65,
                   strokeWidth: 8,
-                  backgroundColor: const Color(0xFFE5E7EB),
+                  backgroundColor: isDark ? const Color(0xFF2A2E45) : const Color(0xFFE5E7EB),
                   valueColor: const AlwaysStoppedAnimation(Color(0xFF3DA89A)),
                 ),
                 Container(
@@ -299,20 +312,20 @@ class _HomeScreenV3State extends State<HomeScreenV3> with TickerProviderStateMix
             ),
           ),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             '65%',
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF1F2937),
+              color: isDark ? Colors.white : const Color(0xFF1F2937),
             ),
           ),
           const SizedBox(height: 4),
-          const Text(
+          Text(
             'Daily Goal',
             style: TextStyle(
               fontSize: 14,
-              color: Color(0xFF6B7280),
+              color: isDark ? Colors.white70 : const Color(0xFF6B7280),
             ),
           ),
         ],
@@ -321,11 +334,14 @@ class _HomeScreenV3State extends State<HomeScreenV3> with TickerProviderStateMix
   }
 
   Widget _buildTotalXpCard() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF16213E) : Colors.white,
         borderRadius: BorderRadius.circular(20),
+        border: isDark ? Border.all(color: const Color(0xFF2A2E45)) : null,
         boxShadow: [
           BoxShadow(
             color: const Color(0x08000000),
@@ -339,27 +355,27 @@ class _HomeScreenV3State extends State<HomeScreenV3> with TickerProviderStateMix
           Container(
             width: 80,
             height: 80,
-            decoration: const BoxDecoration(
-              color: Color(0xFFFEF3C7),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF2A2E45) : const Color(0xFFFEF3C7),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.flash_on, color: Color(0xFFF59E0B), size: 40),
           ),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             '3,420',
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF1F2937),
+              color: isDark ? Colors.white : const Color(0xFF1F2937),
             ),
           ),
           const SizedBox(height: 4),
-          const Text(
+          Text(
             'Total XP',
             style: TextStyle(
               fontSize: 14,
-              color: Color(0xFF6B7280),
+              color: isDark ? Colors.white70 : const Color(0xFF6B7280),
             ),
           ),
         ],
@@ -382,12 +398,131 @@ class _HomeScreenV3State extends State<HomeScreenV3> with TickerProviderStateMix
     );
   }
 
+  Widget _buildFriendsSection() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Consumer<SocialProvider>(
+      builder: (context, social, _) {
+        return Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF16213E) : Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: isDark ? Border.all(color: const Color(0xFF2A2E45)) : null,
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0x08000000),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Friends',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : const Color(0xFF1F2937),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const FriendsScreen()),
+                    ),
+                    child: const Text('View All'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              if (social.friends.isEmpty)
+                Text(
+                  'No friends yet. Start adding!',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                  ),
+                )
+              else
+                SizedBox(
+                  height: 72,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: social.friends.length + 1,
+                    separatorBuilder: (_, __) => const SizedBox(width: 12),
+                    itemBuilder: (context, index) {
+                      if (index == social.friends.length) {
+                        return GestureDetector(
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const AddFriendScreen()),
+                          ),
+                          child: Container(
+                            width: 72,
+                            decoration: BoxDecoration(
+                              color: isDark ? const Color(0xFF1A1A2E) : const Color(0xFFF3F4F6),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: isDark ? const Color(0xFF2A2E45) : const Color(0xFFE5E7EB)),
+                            ),
+                            child: const Center(
+                              child: Icon(Icons.person_add_alt_1, color: Color(0xFF3DA89A)),
+                            ),
+                          ),
+                        );
+                      }
+                      final name = social.friends[index];
+                      return GestureDetector(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => CommunityUserProfileScreen(username: name, avatar: '👤'),
+                          ),
+                        ),
+                        child: Container(
+                          width: 72,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF4DB8A8), Color(0xFF3DA89A)],
+                            ),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Center(
+                            child: Text(
+                              name.split(' ').first,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.white,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildSubjectAccuracyCard() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF16213E) : Colors.white,
         borderRadius: BorderRadius.circular(20),
+        border: isDark ? Border.all(color: const Color(0xFF2A2E45)) : null,
         boxShadow: [
           BoxShadow(
             color: const Color(0x08000000),
@@ -399,12 +534,12 @@ class _HomeScreenV3State extends State<HomeScreenV3> with TickerProviderStateMix
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Subject Accuracy',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF1F2937),
+              color: isDark ? Colors.white : const Color(0xFF1F2937),
             ),
           ),
           const SizedBox(height: 20),
@@ -417,6 +552,8 @@ class _HomeScreenV3State extends State<HomeScreenV3> with TickerProviderStateMix
   }
 
   Widget _buildSubjectRow(String subject, int percentage, Color color) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -425,9 +562,9 @@ class _HomeScreenV3State extends State<HomeScreenV3> with TickerProviderStateMix
           children: [
             Text(
               subject,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
-                color: Color(0xFF6B7280),
+                color: isDark ? Colors.white70 : const Color(0xFF6B7280),
               ),
             ),
             Text(
@@ -455,6 +592,7 @@ class _HomeScreenV3State extends State<HomeScreenV3> with TickerProviderStateMix
   }
 
   Widget _buildWeeklyProgressGraph() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     // Sample data for the week - hours studied per day
     final weekData = [2.5, 3.0, 1.5, 4.0, 3.5, 2.0, 3.8];
     final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -463,8 +601,9 @@ class _HomeScreenV3State extends State<HomeScreenV3> with TickerProviderStateMix
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF16213E) : Colors.white,
         borderRadius: BorderRadius.circular(20),
+        border: isDark ? Border.all(color: const Color(0xFF2A2E45)) : null,
         boxShadow: [
           BoxShadow(
             color: const Color(0x08000000),
@@ -479,12 +618,12 @@ class _HomeScreenV3State extends State<HomeScreenV3> with TickerProviderStateMix
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'Weekly Progress',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF1F2937),
+                  color: isDark ? Colors.white : const Color(0xFF1F2937),
                 ),
               ),
               Container(
@@ -505,11 +644,11 @@ class _HomeScreenV3State extends State<HomeScreenV3> with TickerProviderStateMix
             ],
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Hours studied this week',
             style: TextStyle(
               fontSize: 12,
-              color: Color(0xFF9CA3AF),
+              color: isDark ? Colors.white70 : const Color(0xFF9CA3AF),
             ),
           ),
           const SizedBox(height: 24),
@@ -575,11 +714,14 @@ class _HomeScreenV3State extends State<HomeScreenV3> with TickerProviderStateMix
   }
 
   Widget _buildQuickStartActionsCard() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF16213E) : Colors.white,
         borderRadius: BorderRadius.circular(20),
+        border: isDark ? Border.all(color: const Color(0xFF2A2E45)) : null,
         boxShadow: [
           BoxShadow(
             color: const Color(0x08000000),
@@ -591,12 +733,12 @@ class _HomeScreenV3State extends State<HomeScreenV3> with TickerProviderStateMix
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Quick Start',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF1F2937),
+              color: isDark ? Colors.white : const Color(0xFF1F2937),
             ),
           ),
           const SizedBox(height: 16),
@@ -719,6 +861,8 @@ class _HomeScreenV3State extends State<HomeScreenV3> with TickerProviderStateMix
   }
 
   Widget _buildBadge(String label, IconData icon, Color color) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Column(
       children: [
         Container(
@@ -734,9 +878,9 @@ class _HomeScreenV3State extends State<HomeScreenV3> with TickerProviderStateMix
         const SizedBox(height: 8),
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 11,
-            color: Color(0xFF6B7280),
+            color: isDark ? Colors.white70 : const Color(0xFF6B7280),
           ),
         ),
       ],
@@ -744,9 +888,12 @@ class _HomeScreenV3State extends State<HomeScreenV3> with TickerProviderStateMix
   }
 
   Widget _buildBottomNav() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF16213E) : Colors.white,
+        border: isDark ? Border(top: BorderSide(color: const Color(0xFF2A2E45))) : null,
         boxShadow: [
           BoxShadow(
             color: const Color(0x0D000000),

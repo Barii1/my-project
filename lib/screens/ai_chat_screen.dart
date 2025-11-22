@@ -1,8 +1,12 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import '../theme/app_theme.dart';
+import 'package:provider/provider.dart';
+import '../providers/ai_chat_sessions_provider.dart';
 
 class Message {
   final String id;
@@ -25,26 +29,28 @@ class Message {
 class AIChatScreen extends StatefulWidget {
   final String course;
   final VoidCallback onBack;
+  final String? sessionId;
 
   const AIChatScreen({
     super.key,
     required this.course,
     required this.onBack,
+    this.sessionId,
   });
 
   @override
   State<AIChatScreen> createState() => _AIChatScreenState();
 }
 
-class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderStateMixin {
+class _AIChatScreenState extends State<AIChatScreen> with TickerProviderStateMixin {
   final List<Message> _messages = [];
   final TextEditingController _inputController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   late final AnimationController _loadingController;
-  late final AnimationController _micPulseController;
   String? _copiedMessageId;
   bool _isLoading = false;
-  bool _isListening = false;
+  XFile? _pendingImage;
+  PlatformFile? _pendingFile;
 
   @override
   void initState() {
@@ -52,12 +58,6 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
     _loadingController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
-    );
-    _micPulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-      lowerBound: 0.0,
-      upperBound: 1.0,
     );
     _inputController.addListener(() {
       if (mounted) setState(() {});
@@ -84,6 +84,7 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
       _inputController.clear();
       _isLoading = true;
     });
+    _recordToSession(text);
 
     _scrollToBottom();
     _loadingController.repeat();
@@ -105,46 +106,90 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
         ));
         _isLoading = false;
       });
+      _recordToSession(fullText);
       _scrollToBottom();
       _loadingController.stop();
     });
   }
 
-  Future<void> _handleImageUpload() async {
-    final ImagePicker picker = ImagePicker();
-    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-
+  Future<void> _pickImage(ImageSource source) async {
+    final picker = ImagePicker();
+    final image = await picker.pickImage(source: source);
     if (image == null) return;
     if (!mounted) return;
+    setState(() => _pendingImage = image);
+  }
 
+  void _sendPendingImage() {
+    if (_pendingImage == null) return;
     setState(() {
       _isLoading = true;
     });
     _loadingController.repeat();
-    
     final userMessage = Message(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
-      content: 'I uploaded an image with a question',
+      content: 'Image question attached',
       isUser: true,
       hasImage: true,
     );
-
-    setState(() {
-      _messages.add(userMessage);
-    });
-
+    _messages.add(userMessage);
+    _pendingImage = null;
+    _recordToSession('Image question attached');
     Timer(const Duration(seconds: 1), () {
+      if (!mounted) return;
       final aiMessage = Message(
         id: (DateTime.now().millisecondsSinceEpoch + 1).toString(),
-        content: 'I can see your image! Let me analyze it and help you solve this problem...',
+        content: 'Got the image! I will walk through its details and help you answer this.',
         isUser: false,
       );
-
       setState(() {
         _messages.add(aiMessage);
+        _isLoading = false;
       });
+      _loadingController.stop();
       _scrollToBottom();
+      _recordToSession('Got the image! I will walk through its details...');
     });
+  }
+
+  Future<void> _pickDocument() async {
+    final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['pdf']);
+    if (result == null || result.files.isEmpty) return;
+    setState(() => _pendingFile = result.files.first);
+  }
+
+  void _sendPendingFile() {
+    if (_pendingFile == null) return;
+    setState(() { _isLoading = true; });
+    _loadingController.repeat();
+    final userMessage = Message(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      content: 'PDF uploaded: ${_pendingFile!.name}',
+      isUser: true,
+    );
+    _messages.add(userMessage);
+    _recordToSession('PDF uploaded: ${_pendingFile!.name}');
+    _pendingFile = null;
+    Timer(const Duration(seconds: 1), () {
+      if (!mounted) return;
+      final aiMessage = Message(
+        id: (DateTime.now().millisecondsSinceEpoch + 1).toString(),
+        content: 'I will extract key points from the PDF and assist you.',
+        isUser: false,
+      );
+      setState(() { _messages.add(aiMessage); _isLoading = false; });
+      _loadingController.stop();
+      _scrollToBottom();
+      _recordToSession('Analyzing uploaded PDF...');
+    });
+  }
+
+  void _recordToSession(String content) {
+    if (widget.sessionId == null) return;
+    try {
+      final sessions = Provider.of<AiChatSessionsProvider>(context, listen: false);
+      sessions.recordMessage(widget.sessionId!, content);
+    } catch (_) {}
   }
 
   Future<void> _handleCopyCode(String code, String messageId) async {
@@ -256,43 +301,7 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
                       ],
                     ),
                   ),
-                  PopupMenuButton<String>(
-                    onSelected: (value) {
-                      switch (value) {
-                        case 'dailyQuiz':
-                          Navigator.pushNamed(context, '/dailyQuiz');
-                          break;
-                        case 'flashcards':
-                          Navigator.pushNamed(context, '/flashcards');
-                          break;
-                        case 'practice':
-                          Navigator.pushNamed(context, '/practice');
-                          break;
-                        case 'notes':
-                          Navigator.pushNamed(context, '/notes');
-                          break;
-                        case 'quiz':
-                          Navigator.pushNamed(context, '/quiz');
-                          break;
-                      }
-                    },
-                    itemBuilder: (ctx) => [
-                      const PopupMenuItem(value: 'dailyQuiz', child: Text('Daily Quiz')),
-                      const PopupMenuItem(value: 'flashcards', child: Text('Flashcards')),
-                      const PopupMenuItem(value: 'practice', child: Text('Practice')),
-                      const PopupMenuItem(value: 'notes', child: Text('Notes')),
-                      const PopupMenuItem(value: 'quiz', child: Text('Quiz')),
-                    ],
-                    child: Container(
-                      width: 44,
-                      height: 44,
-                      decoration: const BoxDecoration(
-                        color: Colors.white24,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(Icons.menu, color: Colors.white, size: 22),
-                    ),
-                  ),
+                  // Removed flashcards/daily quiz menu per user request.
                 ],
               ),
             ),
@@ -352,18 +361,41 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
               ),
               child: Row(
                 children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0x1A00A8A8),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: IconButton(
-                      onPressed: _handleImageUpload,
-                      icon: const Icon(
-                        Icons.image_outlined,
-                        color: Color(0xFF00A8A8),
+                  Row(
+                    children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0x1A00A8A8),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: IconButton(
+                          onPressed: () => _pickImage(ImageSource.gallery),
+                          icon: const Icon(Icons.image_outlined, color: Color(0xFF00A8A8)),
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 6),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0x1A00A8A8),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: IconButton(
+                          onPressed: () => _pickImage(ImageSource.camera),
+                          icon: const Icon(Icons.camera_alt_outlined, color: Color(0xFF00A8A8)),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0x1A00A8A8),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: IconButton(
+                          onPressed: _pickDocument,
+                          icon: const Icon(Icons.picture_as_pdf_outlined, color: Color(0xFF00A8A8)),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -398,43 +430,85 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: _inputController.text.trim().isEmpty
-                          ? LinearGradient(colors: [Colors.grey.shade400, Colors.grey.shade500])
-                          : AppTheme.appGradient,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: IconButton(
-                      onPressed: _inputController.text.trim().isEmpty ? null : _handleSend,
-                      icon: Icon(Icons.send,
-                          color: _inputController.text.trim().isEmpty ? Colors.white70 : Colors.white),
-                      disabledColor: Colors.white70,
-                    ),
+                  Row(
+                    children: [
+                      if (_pendingImage != null)
+                        GestureDetector(
+                          onTap: _sendPendingImage,
+                          child: Container(
+                            width: 42,
+                            height: 42,
+                            margin: const EdgeInsets.only(right: 8),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFF00A8A8)),
+                              image: DecorationImage(
+                                image: FileImage(
+                                  // ignore: deprecated_member_use
+                                  // Using File constructor directly for simplicity
+                                  // (Assumes proper permissions are configured.)
+                                  // Convert XFile path to File
+                                  // ignore warning due to restricted imports
+                                  // This avoids adding dart:io at top; we can inline below.
+                                  // Will be replaced if needed.
+                                  // Using dart:io
+                                  // Provide a minimal inline File instance
+                                  // We add import just above class if missing.
+                                  // Actually we should import dart:io.
+                                  // We'll patch import.
+                                  // placeholder replaced by real File object
+                                  // Implementation adjusts below
+                                  // but analyzer may need dart:io import.
+                                  // We'll patch import at top.
+                                  // final file
+                                  // ignore comments
+                                  File(_pendingImage!.path),
+                                ),
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            child: Container(
+                              alignment: Alignment.topRight,
+                              padding: const EdgeInsets.all(4),
+                              child: const Icon(Icons.send, size: 16, color: Colors.white),
+                            ),
+                          ),
+                        ),
+                      if (_pendingFile != null)
+                        GestureDetector(
+                          onTap: _sendPendingFile,
+                          child: Container(
+                            width: 42,
+                            height: 42,
+                            margin: const EdgeInsets.only(right: 8),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: const Color(0xFF00A8A8)),
+                              color: const Color(0xFFE0F2F1),
+                            ),
+                            child: const Center(child: Icon(Icons.picture_as_pdf, size: 20, color: Color(0xFF00A8A8))),
+                          ),
+                        ),
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: _inputController.text.trim().isEmpty
+                              ? LinearGradient(colors: [Colors.grey.shade400, Colors.grey.shade500])
+                              : AppTheme.appGradient,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: IconButton(
+                          onPressed: _inputController.text.trim().isEmpty ? null : _handleSend,
+                          icon: Icon(Icons.send,
+                              color: _inputController.text.trim().isEmpty ? Colors.white70 : Colors.white),
+                          disabledColor: Colors.white70,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
           ],
-        ),
-        // Floating Mic Button
-        Positioned(
-          right: 20,
-          bottom: 90,
-          child: _MicFab(
-            isActive: _isListening,
-            controller: _micPulseController,
-            onPressed: () {
-              setState(() {
-                _isListening = !_isListening;
-              });
-              if (_isListening) {
-                _micPulseController.repeat(reverse: true);
-              } else {
-                _micPulseController.stop();
-              }
-            },
-          ),
         ),
       ],
       ),
@@ -449,7 +523,6 @@ class _AIChatScreenState extends State<AIChatScreen> with SingleTickerProviderSt
     _inputController.dispose();
     _scrollController.dispose();
     _loadingController.dispose();
-    _micPulseController.dispose();
     super.dispose();
   }
 }
@@ -701,46 +774,4 @@ class _TypingIndicatorDotsState extends State<_TypingIndicatorDots> {
   }
 }
 
-class _MicFab extends StatelessWidget {
-  final bool isActive;
-  final AnimationController controller;
-  final VoidCallback onPressed;
-  const _MicFab({required this.isActive, required this.controller, required this.onPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: controller,
-      builder: (context, child) {
-        final scale = isActive ? (1.0 + 0.08 * (controller.value)) : 1.0;
-        final glow = isActive ? (0.25 + 0.35 * controller.value) : 0.2;
-        return Transform.scale(
-          scale: scale,
-          child: GestureDetector(
-            onTap: onPressed,
-            child: Container(
-              width: 60,
-              height: 60,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: AppTheme.appGradient,
-                boxShadow: [
-                  BoxShadow(
-                    color: Color.lerp(Colors.transparent, AppTheme.primary, glow)!,
-                    blurRadius: isActive ? 24 : 12,
-                    spreadRadius: isActive ? 2 : 0,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-              ),
-              child: Icon(
-                isActive ? Icons.stop_rounded : Icons.mic,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
-}
+// Mic voice feature removed per user request.

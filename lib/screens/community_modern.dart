@@ -1,12 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
+import 'bookmarks_screen.dart';
+import 'community_study_groups.dart';
+import 'community_questions.dart';
+import 'community_post_detail.dart';
+import 'community_user_profile.dart';
+import 'friends_screen.dart';
+import 'add_friend_screen.dart';
+import 'package:provider/provider.dart';
+import '../providers/social_provider.dart';
 
 class CommunityModernScreen extends StatelessWidget {
   const CommunityModernScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    // Removed unused 'social' variable here; provider used within post widgets.
+    
     return Scaffold(
-      backgroundColor: const Color(0xFFFEF7FA),
+      backgroundColor: isDark ? const Color(0xFF1A1A2E) : const Color(0xFFFEF7FA),
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
@@ -21,7 +34,7 @@ class CommunityModernScreen extends StatelessWidget {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Expanded(
+                        Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -30,15 +43,15 @@ class CommunityModernScreen extends StatelessWidget {
                                 style: TextStyle(
                                   fontSize: 28,
                                   fontWeight: FontWeight.bold,
-                                  color: Color(0xFF34495E),
+                                  color: isDark ? Colors.white : const Color(0xFF34495E),
                                 ),
                               ),
-                              SizedBox(height: 4),
+                              const SizedBox(height: 4),
                               Text(
                                 'Connect with fellow learners',
                                 style: TextStyle(
                                   fontSize: 16,
-                                  color: Color(0xFF64748B),
+                                  color: isDark ? Colors.white70 : const Color(0xFF64748B),
                                 ),
                               ),
                             ],
@@ -92,33 +105,104 @@ class CommunityModernScreen extends StatelessWidget {
                 ),
               ),
 
-              // Filter Chips
+              // Quick Access Cards
               Padding(
-                padding: const EdgeInsets.only(left: 24, bottom: 24),
-                child: SizedBox(
-                  height: 40,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    children: const [
-                      _FilterChip(label: 'All', isSelected: true),
-                      _FilterChip(label: 'Trending'),
-                      _FilterChip(label: 'Study Groups'),
-                      _FilterChip(label: 'Questions'),
-                      _FilterChip(label: 'Resources'),
-                    ],
-                  ),
-                ),
-              ),
-
-              // Featured Post
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 24),
-                child: _FeaturedPost(
-                  title: 'Study Group: Data Structures 🚀',
-                  author: 'Sarah Ahmed',
-                  time: '2 days ago',
-                  members: 24,
-                  excerpt: 'Join our daily problem-solving sessions! We cover arrays, linked lists, trees, and more. Everyone welcome!',
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _QuickAccessCard(
+                            icon: Icons.group,
+                            label: 'Study Groups',
+                            color: const Color(0xFF3B82F6),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const CommunityStudyGroupsScreen(),
+                                ),
+                              );
+                            },
+                            isDark: isDark,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _QuickAccessCard(
+                            icon: Icons.help_outline,
+                            label: 'Q&A',
+                            color: const Color(0xFF10B981),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const CommunityQuestionsScreen(),
+                                ),
+                              );
+                            },
+                            isDark: isDark,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _QuickAccessCard(
+                            icon: Icons.people_alt_outlined,
+                            label: 'Friends',
+                            color: const Color(0xFF8B5CF6),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const FriendsScreen(),
+                                ),
+                              );
+                            },
+                            isDark: isDark,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _QuickAccessCard(
+                            icon: Icons.person_add_alt_1,
+                            label: 'Add Friend',
+                            color: const Color(0xFFF59E0B),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const AddFriendScreen(),
+                                ),
+                              );
+                            },
+                            isDark: isDark,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _QuickAccessCard(
+                            icon: Icons.bookmarks_outlined,
+                            label: 'Bookmarks',
+                            color: const Color(0xFFEC4899),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const BookmarksScreen(),
+                                ),
+                              );
+                            },
+                            isDark: isDark,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
 
@@ -129,42 +213,42 @@ class CommunityModernScreen extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: const [
+                  children: [
                     Text(
                       'Recent Posts',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF34495E),
+                        color: isDark ? Colors.white : const Color(0xFF34495E),
                       ),
                     ),
                     SizedBox(height: 16),
                     _CommunityPost(
+                      postId: 'post1',
                       author: 'Alex Morgan',
                       time: '3h ago',
                       avatar: '🎓',
                       content: 'Just aced my Algorithms exam! The dynamic programming section on this app really helped. Thank you! 💯',
-                      likes: 42,
                       comments: 12,
                       hasImage: false,
                     ),
                     SizedBox(height: 12),
                     _CommunityPost(
+                      postId: 'post2',
                       author: 'Jordan Lee',
                       time: '5h ago',
                       avatar: '💻',
                       content: 'Created comprehensive notes on Binary Search Trees. Check them out in the notes section!',
-                      likes: 38,
                       comments: 9,
                       hasImage: true,
                     ),
                     SizedBox(height: 12),
                     _CommunityPost(
+                      postId: 'post3',
                       author: 'Emily Chen',
                       time: '1d ago',
                       avatar: '📚',
                       content: 'Looking for study partners for the upcoming Discrete Math exam. Anyone interested?',
-                      likes: 27,
                       comments: 15,
                       hasImage: false,
                     ),
@@ -180,295 +264,168 @@ class CommunityModernScreen extends StatelessWidget {
   }
 }
 
-class _FilterChip extends StatelessWidget {
+// Quick Access Card Widget
+class _QuickAccessCard extends StatelessWidget {
+  final IconData icon;
   final String label;
-  final bool isSelected;
-  
-  const _FilterChip({required this.label, this.isSelected = false});
+  final Color color;
+  final VoidCallback onTap;
+  final bool isDark;
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(right: 10),
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: isSelected
-              ? const LinearGradient(
-                  colors: [Color(0xFF4DB8A8), Color(0xFF3DA89A)],
-                )
-              : null,
-          color: isSelected ? null : Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected
-                ? Colors.transparent
-                : const Color(0xFFE5E7EB),
-          ),
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: () {
-              if (label == 'Trending') {
-                Navigator.of(context).pushNamed('/community/trending');
-              }
-            },
-            borderRadius: BorderRadius.circular(20),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              child: Text(
-                label,
-                style: TextStyle(
-                  color: isSelected ? Colors.white : const Color(0xFF64748B),
-                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                  fontSize: 14,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _FeaturedPost extends StatelessWidget {
-  final String title;
-  final String author;
-  final String time;
-  final int members;
-  final String excerpt;
-  
-  const _FeaturedPost({
-    required this.title,
-    required this.author,
-    required this.time,
-    required this.members,
-    required this.excerpt,
+  const _QuickAccessCard({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+    required this.isDark,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF8B5CF6), Color(0xFF7C3AED)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        constraints: const BoxConstraints(minWidth: 140),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              color.withOpacity(0.2),
+              color.withOpacity(0.05),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: color.withOpacity(0.3),
+            width: 2,
+          ),
         ),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF8B5CF6).withOpacity(0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          // Decorative circles
-          Positioned(
-            top: -30,
-            right: -30,
-            child: Container(
-              width: 100,
-              height: 100,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 48,
+              height: 48,
               decoration: BoxDecoration(
+                color: color.withOpacity(0.2),
                 shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.1),
+              ),
+              child: Icon(
+                icon,
+                color: color,
+                size: 24,
               ),
             ),
-          ),
-          Positioned(
-            bottom: -20,
-            left: -20,
-            child: Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.1),
+            const SizedBox(height: 12),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? Colors.white : const Color(0xFF34495E),
+                ),
               ),
             ),
-          ),
-          
-          Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.star, color: Colors.white, size: 14),
-                          SizedBox(width: 4),
-                          Text(
-                            'Featured',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  excerpt,
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.9),
-                    fontSize: 15,
-                    height: 1.4,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Center(
-                        child: Text(
-                          '👤',
-                          style: TextStyle(fontSize: 16),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            author,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 14,
-                            ),
-                          ),
-                          Text(
-                            '$time • $members members',
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.7),
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        child: InkWell(
-                          onTap: () {},
-                          borderRadius: BorderRadius.circular(12),
-                          child: const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                            child: Text(
-                              'Join',
-                              style: TextStyle(
-                                color: Color(0xFF8B5CF6),
-                                fontWeight: FontWeight.w600,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
 
 class _CommunityPost extends StatelessWidget {
+  final String postId;
   final String author;
   final String time;
   final String avatar;
   final String content;
-  final int likes;
   final int comments;
   final bool hasImage;
 
   const _CommunityPost({
+    required this.postId,
     required this.author,
     required this.time,
     required this.avatar,
     required this.content,
-    required this.likes,
     required this.comments,
     this.hasImage = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFFFE6ED), width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final social = Provider.of<SocialProvider>(context, listen: false);
+    
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => CommunityPostDetailScreen(
+              postId: postId,
+              author: author,
+              time: time,
+              avatar: avatar,
+              content: content,
+              likes: social.likeCount(postId),
+              comments: social.commentCount(postId),
+            ),
           ),
-        ],
-      ),
-      padding: const EdgeInsets.all(18),
+        );
+      },
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF16213E) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: isDark ? const Color(0xFF2A2E45) : const Color(0xFFFFE6ED), width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.all(18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Author info
           Row(
             children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFEF3C7),
-                  shape: BoxShape.circle,
-                ),
-                child: Center(
-                  child: Text(
-                    avatar,
-                    style: const TextStyle(fontSize: 20),
+              GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => CommunityUserProfileScreen(
+                        username: author,
+                        avatar: avatar,
+                      ),
+                    ),
+                  );
+                },
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFEF3C7),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Center(
+                    child: Text(
+                      avatar,
+                      style: const TextStyle(fontSize: 20),
+                    ),
                   ),
                 ),
               ),
@@ -479,16 +436,16 @@ class _CommunityPost extends StatelessWidget {
                   children: [
                     Text(
                       author,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 15,
-                        color: Color(0xFF34495E),
+                        color: isDark ? Colors.white : const Color(0xFF34495E),
                       ),
                     ),
                     Text(
                       time,
-                      style: const TextStyle(
-                        color: Color(0xFF94A3B8),
+                      style: TextStyle(
+                        color: isDark ? Colors.white54 : const Color(0xFF94A3B8),
                         fontSize: 13,
                       ),
                     ),
@@ -497,9 +454,9 @@ class _CommunityPost extends StatelessWidget {
               ),
               IconButton(
                 onPressed: () {},
-                icon: const Icon(
+                icon: Icon(
                   Icons.more_horiz,
-                  color: Color(0xFF94A3B8),
+                  color: isDark ? Colors.white54 : const Color(0xFF94A3B8),
                 ),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
@@ -511,9 +468,9 @@ class _CommunityPost extends StatelessWidget {
           // Content
           Text(
             content,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 15,
-              color: Color(0xFF34495E),
+              color: isDark ? Colors.white : const Color(0xFF34495E),
               height: 1.5,
             ),
           ),
@@ -539,29 +496,10 @@ class _CommunityPost extends StatelessWidget {
           const SizedBox(height: 14),
           
           // Actions
-          Row(
-            children: [
-              _ActionButton(
-                icon: Icons.favorite_border,
-                label: '$likes',
-                color: const Color(0xFFEC4899),
-              ),
-              const SizedBox(width: 20),
-              _ActionButton(
-                icon: Icons.chat_bubble_outline,
-                label: '$comments',
-                color: const Color(0xFF3B82F6),
-              ),
-              const Spacer(),
-              _ActionButton(
-                icon: Icons.share_outlined,
-                label: 'Share',
-                color: const Color(0xFF10B981),
-              ),
-            ],
-          ),
+          _PostActions(postId: postId, author: author, avatar: avatar, content: content, time: time, isDark: isDark),
         ],
       ),
+    ),
     );
   }
 }
@@ -570,19 +508,21 @@ class _ActionButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final Color color;
-  
+  final VoidCallback onTap;
+
   const _ActionButton({
     required this.icon,
     required this.label,
     required this.color,
+    required this.onTap,
   });
-  
+
   @override
   Widget build(BuildContext context) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () {},
+        onTap: onTap,
         borderRadius: BorderRadius.circular(8),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
@@ -605,4 +545,138 @@ class _ActionButton extends StatelessWidget {
       ),
     );
   }
+}
+
+class _SheetAction extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  const _SheetAction({required this.icon, required this.label, required this.onTap});
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return ListTile(
+      leading: Icon(icon, color: isDark ? Colors.white : const Color(0xFF34495E)),
+      title: Text(label, style: TextStyle(color: isDark ? Colors.white : const Color(0xFF34495E))),
+      onTap: onTap,
+    );
+  }
+}
+
+class _PostActions extends StatelessWidget {
+  final String postId;
+  final String author;
+  final String avatar;
+  final String content;
+  final String time;
+  final bool isDark;
+  const _PostActions({required this.postId, required this.author, required this.avatar, required this.content, required this.time, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Selector<SocialProvider, _PostActionState>(
+      selector: (ctx, social) => _PostActionState(
+        liked: social.isLiked(postId),
+        likeCount: social.likeCount(postId),
+        commentCount: social.commentCount(postId),
+        bookmarked: social.isBookmarked(postId),
+      ),
+      builder: (ctx, state, _) {
+        final social = Provider.of<SocialProvider>(context, listen: false);
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _ActionButton(
+              icon: state.liked ? Icons.favorite : Icons.favorite_border,
+              label: '${state.likeCount}',
+              color: const Color(0xFFEC4899),
+              onTap: () => social.toggleLike(postId),
+            ),
+            const SizedBox(width: 20),
+            _ActionButton(
+              icon: Icons.chat_bubble_outline,
+              label: '${state.commentCount}',
+              color: const Color(0xFF3B82F6),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => CommunityPostDetailScreen(
+                    postId: postId,
+                    author: author,
+                    time: time,
+                    avatar: avatar,
+                    content: content,
+                    likes: state.likeCount,
+                    comments: state.commentCount,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            _ActionButton(
+              icon: state.bookmarked ? Icons.bookmark : Icons.bookmark_border,
+              label: 'Save',
+              color: const Color(0xFFF59E0B),
+              onTap: () => social.toggleBookmark(postId),
+            ),
+            const SizedBox(width: 12),
+            _ActionButton(
+              icon: Icons.share_outlined,
+              label: 'Share',
+              color: const Color(0xFF10B981),
+              onTap: () => Share.share('$author: $content'),
+            ),
+            const SizedBox(width: 12),
+            _ActionButton(
+              icon: Icons.more_horiz,
+              label: 'More',
+              color: isDark ? Colors.white54 : const Color(0xFF94A3B8),
+              onTap: () {
+                showModalBottomSheet(
+                  context: context,
+                  backgroundColor: isDark ? const Color(0xFF16213E) : Colors.white,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                  ),
+                  builder: (_) {
+                    return Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _SheetAction(icon: Icons.link, label: 'Copy Link', onTap: () {
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Link copied (placeholder)')));
+                          }),
+                          _SheetAction(icon: Icons.flag_outlined, label: 'Report', onTap: () {
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Reported (placeholder)')));
+                          }),
+                          _SheetAction(icon: state.bookmarked ? Icons.bookmark_remove : Icons.bookmark_add_outlined, label: state.bookmarked ? 'Remove Bookmark' : 'Bookmark', onTap: () {
+                            social.toggleBookmark(postId);
+                            Navigator.pop(context);
+                          }),
+                        ],
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ],
+        ),
+        );
+      },
+    );
+  }
+}
+
+class _PostActionState {
+  final bool liked;
+  final int likeCount;
+  final int commentCount;
+  final bool bookmarked;
+  const _PostActionState({required this.liked, required this.likeCount, required this.commentCount, required this.bookmarked});
 }

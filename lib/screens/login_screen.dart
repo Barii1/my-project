@@ -87,6 +87,8 @@ class _LogInState extends State<LogIn> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Form(
       key: _formKey,
       child: Column(
@@ -99,18 +101,18 @@ class _LogInState extends State<LogIn> {
             color: AppTheme.primary,
           ),
           SizedBox(height: AppTheme.scaledSize(context, 0, 24).height),
-          Text('Welcome Back', textAlign: TextAlign.center, style: AppTheme.heading1(context)),
+          Text('Welcome Back', textAlign: TextAlign.center, style: AppTheme.heading1(context).copyWith(color: isDark ? Colors.white : null)),
           SizedBox(height: AppTheme.scaledSize(context, 0, 8).height),
-          Text('Log in to continue learning', textAlign: TextAlign.center, style: AppTheme.caption(context)),
+          Text('Log in to continue learning', textAlign: TextAlign.center, style: AppTheme.caption(context).copyWith(color: isDark ? Colors.white70 : null)),
           SizedBox(height: AppTheme.scaledSize(context, 0, 40).height),
           TextFormField(
             controller: _emailController,
-            style: AppTheme.bodyText(context),
+            style: AppTheme.bodyText(context).copyWith(color: isDark ? Colors.white : null),
             decoration: InputDecoration(
               labelText: 'Email',
-              labelStyle: AppTheme.caption(context),
+              labelStyle: AppTheme.caption(context).copyWith(color: isDark ? Colors.white70 : null),
               hintText: 'Your email@example.com',
-              hintStyle: AppTheme.caption(context).copyWith(color: Colors.black38),
+              hintStyle: AppTheme.caption(context).copyWith(color: isDark ? Colors.white38 : Colors.black38),
               prefixIcon: Icon(Icons.email_outlined, color: AppTheme.primary),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
             ),
@@ -124,12 +126,12 @@ class _LogInState extends State<LogIn> {
           SizedBox(height: AppTheme.scaledSize(context, 0, 20).height),
           TextFormField(
             controller: _passwordController,
-            style: AppTheme.bodyText(context),
+            style: AppTheme.bodyText(context).copyWith(color: isDark ? Colors.white : null),
             decoration: InputDecoration(
               labelText: 'Password',
-              labelStyle: AppTheme.caption(context),
+              labelStyle: AppTheme.caption(context).copyWith(color: isDark ? Colors.white70 : null),
               hintText: 'Enter your password',
-              hintStyle: AppTheme.caption(context).copyWith(color: Colors.black38),
+              hintStyle: AppTheme.caption(context).copyWith(color: isDark ? Colors.white38 : Colors.black38),
               prefixIcon: Icon(Icons.lock_outline, color: AppTheme.primary),
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
               suffixIcon: IconButton(
@@ -159,18 +161,23 @@ class _LogInState extends State<LogIn> {
                 : Text('Log in', style: AppTheme.bodyText(context).copyWith(color: Colors.white, fontWeight: FontWeight.w600)),
           ),
           SizedBox(height: AppTheme.scaledSize(context, 0, 16).height),
-          TextButton(
-            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const CreateAccountScreen())),
-            child: RichText(
-              textAlign: TextAlign.center,
-              text: TextSpan(
-                style: AppTheme.caption(context),
-                children: [
-                  TextSpan(text: "Don't have an account? ", style: TextStyle(color: AppTheme.textSecondary)),
-                  TextSpan(text: "Create one", style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.w600)),
-                ],
-              ),
-            ),
+          Builder(
+            builder: (context) {
+              final isDark = Theme.of(context).brightness == Brightness.dark;
+              return TextButton(
+                onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const CreateAccountScreen())),
+                child: RichText(
+                  textAlign: TextAlign.center,
+                  text: TextSpan(
+                    style: AppTheme.caption(context),
+                    children: [
+                      TextSpan(text: "Don't have an account? ", style: TextStyle(color: isDark ? Colors.white70 : AppTheme.textSecondary)),
+                      TextSpan(text: "Create one", style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                ),
+              );
+            },
           ),
         ],
       ),

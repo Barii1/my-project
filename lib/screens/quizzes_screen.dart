@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'sub_topics_screen.dart';
+import 'mixed_quiz_screen.dart';
 
 typedef StartQuizCallback = void Function(String categoryId);
 typedef NavigateCallback = void Function(String screen);
@@ -42,8 +43,10 @@ class QuizzesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Scaffold(
-      backgroundColor: const Color(0xFFFEF7FA),
+      backgroundColor: isDark ? const Color(0xFF1A1A2E) : const Color(0xFFFEF7FA),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(24, 32, 24, 96),
@@ -51,20 +54,20 @@ class QuizzesScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Header
-              const Text(
+              Text(
                 'Quizzes',
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF34495E),
+                  color: isDark ? Colors.white : const Color(0xFF34495E),
                 ),
               ),
               const SizedBox(height: 4),
-              const Text(
+              Text(
                 'Choose a category to start learning',
                 style: TextStyle(
                   fontSize: 16,
-                  color: Color(0xFF64748B),
+                  color: isDark ? Colors.white70 : const Color(0xFF64748B),
                 ),
               ),
               
@@ -133,7 +136,11 @@ class QuizzesScreen extends StatelessWidget {
                 'Random Mixed Quiz',
                 Icons.auto_awesome,
                 () {
-                  // Random mixed quiz functionality
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => const MixedQuizScreen(),
+                    ),
+                  );
                 },
                 iconColor: const Color(0xFF9B59B6),
               ),
@@ -275,12 +282,14 @@ class QuizzesScreen extends StatelessWidget {
     VoidCallback onTap, {
     Color? iconColor,
   }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isDark ? const Color(0xFF16213E) : Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: const Color(0xFF34495E).withOpacity(0.1),
+          color: isDark ? const Color(0xFF2A2E45) : const Color(0xFF34495E).withOpacity(0.1),
         ),
       ),
       child: Material(
@@ -295,16 +304,16 @@ class QuizzesScreen extends StatelessWidget {
               children: [
                 Text(
                   label,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
-                    color: Color(0xFF34495E),
+                    color: isDark ? Colors.white : const Color(0xFF34495E),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
                 Icon(
                   icon,
                   size: 20,
-                  color: iconColor ?? const Color(0xFF34495E),
+                  color: iconColor ?? (isDark ? Colors.white : const Color(0xFF34495E)),
                 ),
               ],
             ),

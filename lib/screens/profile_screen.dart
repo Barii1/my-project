@@ -6,12 +6,14 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Scaffold(
-        backgroundColor: const Color(0xFFFEF7FA),
+        backgroundColor: isDark ? const Color(0xFF1A1A2E) : const Color(0xFFFEF7FA),
       appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
-        title: const Text('Profile', style: TextStyle(color: Color(0xFF1A1A1A), fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
+        title: Text('Profile', style: TextStyle(color: isDark ? Colors.white : const Color(0xFF1A1A1A), fontFamily: 'Poppins', fontWeight: FontWeight.bold)),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings),
@@ -51,9 +53,9 @@ class ProfileScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Student Profile', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF1A1A1A), fontFamily: 'Poppins')),
+                  const Text('Student Profile', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF1A1A1A), fontFamily: 'Poppins')),
                         const SizedBox(height: 4),
-                          const Text('Learning since Sep 2023', style: TextStyle(fontSize: 14, color: Color(0xFF757575), fontFamily: 'Poppins')),
+                          Text('Learning since Sep 2023', style: TextStyle(fontSize: 14, color: isDark ? Colors.white70 : const Color(0xFF757575), fontFamily: 'Poppins')),
                       ],
                     ),
                   ),

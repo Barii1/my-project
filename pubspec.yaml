@@ -28,6 +28,8 @@ dependencies:
   # 🔥 Firebase core (required for all Firebase features)
   firebase_core: ^3.9.0 # or latest compatible; you can also run `flutter pub add firebase_core`
   firebase_auth: ^5.7.0
+  share_plus: ^10.0.2
+  file_picker: ^8.0.2
 
 dev_dependencies:
   flutter_test:

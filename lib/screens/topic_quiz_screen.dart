@@ -614,23 +614,24 @@ class _TopicQuizScreenState extends State<TopicQuizScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final question = _questions[_currentQuestionIndex];
     final options = question['options'] as List<String>;
     final correctAnswer = question['correctAnswer'] as int;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFFEF7FA),
+      backgroundColor: isDark ? const Color(0xFF1A1A2E) : const Color(0xFFFEF7FA),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.close, color: Color(0xFF34495E)),
+          icon: Icon(Icons.close, color: isDark ? Colors.white : const Color(0xFF34495E)),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
           widget.topic['name'] as String,
-          style: const TextStyle(
-            color: Color(0xFF34495E),
+          style: TextStyle(
+            color: isDark ? Colors.white : const Color(0xFF34495E),
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -646,9 +647,9 @@ class _TopicQuizScreenState extends State<TopicQuizScreen> {
                 children: [
                   Text(
                     'Question ${_currentQuestionIndex + 1}/${_questions.length}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
-                      color: Color(0xFF64748B),
+                      color: isDark ? Colors.white70 : const Color(0xFF64748B),
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -730,7 +731,7 @@ class _TopicQuizScreenState extends State<TopicQuizScreen> {
                                       ? const Color(0xFFEF4444).withOpacity(0.1)
                                       : isSelected
                                           ? const Color(0xFF3DA89A).withOpacity(0.1)
-                                          : Colors.white,
+                                          : (isDark ? const Color(0xFF16213E) : Colors.white),
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
                                 color: showCorrect
@@ -739,7 +740,7 @@ class _TopicQuizScreenState extends State<TopicQuizScreen> {
                                         ? const Color(0xFFEF4444)
                                         : isSelected
                                             ? const Color(0xFF3DA89A)
-                                            : const Color(0xFFE5E7EB),
+                                            : (isDark ? const Color(0xFF2A2E45) : const Color(0xFFE5E7EB)),
                                 width: showCorrect || showWrong ? 2 : 1,
                               ),
                             ),
@@ -783,7 +784,7 @@ class _TopicQuizScreenState extends State<TopicQuizScreen> {
                                     options[index],
                                     style: TextStyle(
                                       fontSize: 15,
-                                      color: const Color(0xFF34495E),
+                                      color: isDark ? Colors.white : const Color(0xFF34495E),
                                       fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                                     ),
                                   ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 // 🔹 Firebase imports
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
@@ -16,16 +17,24 @@ import 'screens/progress_screen.dart';
 import 'screens/history_screen.dart';
 import 'screens/home_screen_v3.dart';
 import 'screens/profile_screen.dart';
-import 'screens/settings_modern.dart';
+import 'screens/settings_screen_modern.dart';
 import 'screens/quizzes_screen.dart';
+import 'screens/quiz_categories_screen.dart';
 import 'screens/notification_screen.dart';
 import 'screens/leaderboard_screen.dart';
 import 'providers/auth_provider.dart';
 import 'providers/stats_provider.dart';
 import 'providers/app_state_provider.dart';
+import 'providers/theme_provider.dart';
+import 'providers/social_provider.dart';
+import 'providers/quiz_provider.dart';
+import 'providers/ai_chat_sessions_provider.dart';
 import 'theme/app_theme.dart';
 import 'screens/community_create_post.dart';
-import 'screens/community_trending.dart';
+import 'screens/topic_overview_screen.dart';
+import 'screens/quick_quiz_screen.dart';
+import 'screens/friends_screen.dart';
+import 'screens/add_friend_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -35,14 +44,17 @@ Future<void> main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  final prefs = await SharedPreferences.getInstance();
+
   // Your UI setup
   AppTheme.setSystemUI();
 
-  runApp(const MyApp());
+  runApp(MyApp(prefs: prefs));
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  final SharedPreferences prefs;
+  const MyApp({super.key, required this.prefs});
 
   @override
   Widget build(BuildContext context) {
@@ -50,20 +62,24 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => StatsProvider()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider(prefs)),
         ChangeNotifierProvider(create: (_) {
           final p = AppStateProvider();
           p.loadFlashcardsFromPrefs();
           return p;
         }),
+        ChangeNotifierProvider(create: (_) => SocialProvider()),
+        ChangeNotifierProvider(create: (_) => QuizProvider()),
+        ChangeNotifierProvider(create: (_) => AiChatSessionsProvider()),
       ],
-      child: Consumer<AppStateProvider>(
-        builder: (context, appState, _) {
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, _) {
           return MaterialApp(
             debugShowCheckedModeBanner: false,
             title: 'Ostaad',
             theme: AppTheme.getTheme(Brightness.light),
             darkTheme: AppTheme.getTheme(Brightness.dark),
-            themeMode: appState.themeMode,
+            themeMode: themeProvider.themeMode,
             home: const SplashScreen(),
             onGenerateRoute: (settings) {
               switch (settings.name) {
@@ -72,8 +88,13 @@ class MyApp extends StatelessWidget {
                   return MaterialPageRoute(
                     builder: (context) => AIChatScreen(
                       course: args['course'] as String,
+                      sessionId: args['sessionId'] as String?,
                       onBack: () => Navigator.pop(context),
                     ),
+                  );
+                case '/aiTutor':
+                  return MaterialPageRoute(
+                    builder: (context) => HomeScreenV3(), // TODO: integrate AITutorScreen if separated
                   );
                 case '/flashcards':
                   return MaterialPageRoute(
@@ -94,6 +115,10 @@ class MyApp extends StatelessWidget {
                 case '/quiz':
                   return MaterialPageRoute(
                     builder: (context) => const QuizScreen(),
+                  );
+                case '/quizCategories':
+                  return MaterialPageRoute(
+                    builder: (context) => const QuizCategoriesScreen(),
                   );
                 case '/progress':
                   return MaterialPageRoute(
@@ -123,7 +148,7 @@ class MyApp extends StatelessWidget {
                     'email': auth.email ?? '',
                   };
                   return MaterialPageRoute(
-                    builder: (context) => SettingsModernScreen(
+                    builder: (context) => SettingsScreenModern(
                       user: user,
                       onLogout: () async {
                         await auth.logout();
@@ -159,10 +184,26 @@ class MyApp extends StatelessWidget {
                     builder: (context) =>
                         const CommunityCreatePostScreen(),
                   );
-                case '/community/trending':
+                case '/friends':
                   return MaterialPageRoute(
-                    builder: (context) =>
-                        const CommunityTrendingScreen(),
+                    builder: (context) => const FriendsScreen(),
+                  );
+                case '/friends/add':
+                  return MaterialPageRoute(
+                    builder: (context) => const AddFriendScreen(),
+                  );
+                case '/topicOverview':
+                  final args = settings.arguments as Map<String, dynamic>?;
+                  final title = args?['title'] as String? ?? 'Topic';
+                  final courseId = args?['courseId'] as String? ?? title;
+                  return MaterialPageRoute(
+                    builder: (context) => TopicOverviewScreen(title: title, courseId: courseId),
+                  );
+                case '/quizQuick':
+                  final args = settings.arguments as Map<String, dynamic>?;
+                  final topic = args?['topic'] as String? ?? 'Topic';
+                  return MaterialPageRoute(
+                    builder: (context) => QuickQuizScreen(topic: topic),
                   );
                 default:
                   return null;
