@@ -161,7 +161,7 @@ class _DataUsageScreenState extends State<DataUsageScreen> {
       ),
       value: value,
       onChanged: onChanged,
-      activeColor: const Color(0xFF3DA89A),
+      activeThumbColor: const Color(0xFF3DA89A),
     );
   }
 

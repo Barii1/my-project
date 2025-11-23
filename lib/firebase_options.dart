@@ -85,4 +85,5 @@ class DefaultFirebaseOptions {
     storageBucket: 'ostaad-88d1f.firebasestorage.app',
     measurementId: 'G-EYZR81P4CG',
   );
+
 }

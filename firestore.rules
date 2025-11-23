@@ -1,0 +1,46 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+    match /flashcards/{id} {
+      allow read, write: if request.auth != null && request.auth.uid == request.resource.data.userId;
+    }
+    match /notes/{id} {
+      allow read, write: if request.auth != null && request.auth.uid == request.resource.data.userId;
+    }
+    match /ai_sessions/{id} {
+      allow read, write: if request.auth != null && request.auth.uid == request.resource.data.userId;
+    }
+    match /ai_sessions/{id}/messages/{mid} {
+      allow read, write: if request.auth != null && request.auth.uid == request.resource.data.userId;
+    }
+    // Add similar rules for quizzes, community_posts, comments, leaderboard entries, notifications.
+  }
+}
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "flutter": { ...existing flutter metadata... }
+}
+if (kDebugMode) {
+  FirebaseFirestore.instance.useFirestoreEmulator('localhost', 8080);
+  FirebaseAuth.instance.useAuthEmulator('localhost', 9099);
+}
+const functions = require('firebase-functions');
+const admin = require('firebase-admin');
+admin.initializeApp();
+
+exports.onFlashcardCreate = functions.firestore
+  .document('flashcards/{id}')
+  .onCreate(async (snap, ctx) => {
+    const data = snap.data();
+    const uid = data?.userId;
+    if (!uid) return null;
+    const userRef = admin.firestore().doc(`users/${uid}`);
+    await userRef.set({ flashcardCount: admin.firestore.FieldValue.increment(1) }, { merge: true });
+    return null;
+  });

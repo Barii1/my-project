@@ -9,6 +9,7 @@ import 'settings/profile_settings_screen.dart';
 import 'settings/data_usage_screen.dart';
 import 'settings/security_settings_screen.dart';
 import 'settings/delete_account_screen.dart';
+import 'database_test_screen.dart';
 
 class SettingsScreenModern extends StatelessWidget {
   final Map<String, String> user;
@@ -119,6 +120,19 @@ class SettingsScreenModern extends StatelessWidget {
                       context,
                       MaterialPageRoute(
                           builder: (context) => const FeedbackScreen()));
+                },
+              ),
+              _buildSettingsItem(
+                context,
+                icon: Icons.storage_outlined,
+                iconColor: const Color(0xFF16A085),
+                title: 'Test Database Connection',
+                subtitle: 'Verify Firestore',
+                onTap: () {
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const DatabaseTestScreen()));
                 },
               ),
             ]),

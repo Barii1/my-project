@@ -65,7 +65,7 @@ class AiChatSessionsProvider extends ChangeNotifier {
 
   void recordMessage(String sessionId, String content, {bool fromUser = true}) {
     final session = _sessions.firstWhere((s) => s.id == sessionId, orElse: () => throw Exception('Session not found'));
-    session.lastMessage = content.length > 60 ? content.substring(0, 57) + '…' : content;
+    session.lastMessage = content.length > 60 ? '${content.substring(0, 57)}…' : content;
     session.updatedAt = DateTime.now();
     _sessions.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
     _saveSessions();

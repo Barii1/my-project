@@ -433,6 +433,7 @@ class _HomeScreenV3State extends State<HomeScreenV3> {
             color: const Color(0xFF10B981),
             onTap: () => Navigator.of(context).pushNamed('/notes'),
           ),
+          // Chatbot button removed from home screen
         ],
       ),
     );

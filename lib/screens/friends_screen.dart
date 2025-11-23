@@ -33,12 +33,12 @@ class FriendsScreen extends StatelessWidget {
             padding: const EdgeInsets.all(24),
             children: [
               _SectionHeader(title: 'Your Friends', isDark: isDark),
-              ...social.friends.map((f) => _FriendTile(name: f, isDark: isDark)).toList(),
+              ...social.friends.map((f) => _FriendTile(name: f, isDark: isDark)),
               const SizedBox(height: 32),
               _SectionHeader(title: 'Requests', isDark: isDark),
               if (social.friendRequests.isEmpty)
                 _EmptyCard(isDark: isDark, text: 'No pending requests'),
-              ...social.friendRequests.map((r) => _RequestTile(name: r, isDark: isDark)).toList(),
+              ...social.friendRequests.map((r) => _RequestTile(name: r, isDark: isDark)),
             ],
           );
         },

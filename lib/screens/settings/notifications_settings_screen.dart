@@ -68,7 +68,7 @@ class NotificationsSettingsScreen extends StatelessWidget {
       ),
       value: value,
       onChanged: onChanged,
-      activeColor: const Color(0xFF3DA89A),
+      activeThumbColor: const Color(0xFF3DA89A),
     );
   }
 }

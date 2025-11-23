@@ -115,11 +115,9 @@ class _AITutorScreenState extends State<AITutorScreen> {
                             SizedBox(
                               height: 40,
                               child: ElevatedButton.icon(
-                                onPressed: () {
-                                  final sessions = Provider.of<AiChatSessionsProvider>(context, listen: false);
-                                  final session = sessions.startSession('General');
-                                  Navigator.of(context).pushNamed('/ai-chat', arguments: {'course': 'General', 'sessionId': session.id});
-                                },
+                                  onPressed: () {
+                                    Navigator.of(context).pushNamed('/chat');
+                                  },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Colors.white,
                                   foregroundColor: const Color(0xFF2F8B7E),
@@ -128,7 +126,7 @@ class _AITutorScreenState extends State<AITutorScreen> {
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                                 ),
                                 icon: const Icon(Icons.chat_bubble_outline, size: 18),
-                                label: const Text('Start Chat', style: TextStyle(fontWeight: FontWeight.w600)),
+                                  label: const Text('Chat Here', style: TextStyle(fontWeight: FontWeight.w600)),
                               ),
                             ),
                           ],

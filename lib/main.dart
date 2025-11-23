@@ -35,6 +35,9 @@ import 'screens/topic_overview_screen.dart';
 import 'screens/quick_quiz_screen.dart';
 import 'screens/friends_screen.dart';
 import 'screens/add_friend_screen.dart';
+import 'screens/database_test_screen.dart';
+import 'screens/camera_screen.dart';
+import '../chatbot.dart';
 import 'services/offline_storage_service.dart';
 import 'services/connectivity_service.dart';
 
@@ -226,6 +229,18 @@ class MyApp extends StatelessWidget {
                   final topic = args?['topic'] as String? ?? 'Topic';
                   return MaterialPageRoute(
                     builder: (context) => QuickQuizScreen(topic: topic),
+                  );
+                case '/database-test':
+                  return MaterialPageRoute(
+                    builder: (context) => const DatabaseTestScreen(),
+                  );
+                case '/camera':
+                  return MaterialPageRoute(
+                    builder: (context) => const CameraScreen(),
+                  );
+                case '/chat':
+                  return MaterialPageRoute(
+                    builder: (context) => const ChatPage(),
                   );
                 default:
                   return null;
