@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/flashcard.dart';
 import '../models/chat_thread.dart';
+import '../services/offline_storage_service.dart';
 
 class AppStateProvider with ChangeNotifier {
   // Theme
@@ -103,12 +104,18 @@ class AppStateProvider with ChangeNotifier {
     saveFlashcardsToPrefs();
   }
 
-  // Persistence
+  // Persistence with offline storage
   Future<void> saveFlashcardsToPrefs() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final list = _flashcards.map((f) => {'front': f.front, 'back': f.back}).toList();
       await prefs.setString('flashcards', jsonEncode(list));
+      
+      // Also save to offline storage
+      await OfflineStorageService.saveFlashcardDeck(
+        'user_flashcards',
+        list.map((item) => {'front': item['front'] as String, 'back': item['back'] as String}).toList(),
+      );
     } catch (_) {}
   }
 
@@ -116,14 +123,27 @@ class AppStateProvider with ChangeNotifier {
     try {
       final prefs = await SharedPreferences.getInstance();
       final jsonStr = prefs.getString('flashcards');
-      if (jsonStr == null) return;
-      final data = jsonDecode(jsonStr) as List<dynamic>;
-      _flashcards.clear();
-      for (final item in data) {
-        final map = item as Map<String, dynamic>;
-        _flashcards.add(Flashcard(front: map['front'] ?? '', back: map['back'] ?? ''));
+      
+      List<dynamic>? data;
+      
+      if (jsonStr != null) {
+        data = jsonDecode(jsonStr) as List<dynamic>;
+      } else {
+        // Try loading from offline storage
+        final offlineCards = OfflineStorageService.getFlashcardDeck('user_flashcards');
+        if (offlineCards != null) {
+          data = offlineCards;
+        }
       }
-      notifyListeners();
+      
+      if (data != null) {
+        _flashcards.clear();
+        for (final item in data) {
+          final map = item as Map<String, dynamic>;
+          _flashcards.add(Flashcard(front: map['front'] ?? '', back: map['back'] ?? ''));
+        }
+        notifyListeners();
+      }
     } catch (_) {}
   }
 

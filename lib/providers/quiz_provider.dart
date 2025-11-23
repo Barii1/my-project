@@ -1,6 +1,64 @@
 import 'package:flutter/material.dart';
+import '../services/offline_storage_service.dart';
 
 class QuizProvider extends ChangeNotifier {
+  QuizProvider() {
+    _initializeOfflineData();
+  }
+
+  Future<void> _initializeOfflineData() async {
+    // Cache all quiz data for offline access
+    await _cacheQuizData();
+  }
+
+  Future<void> _cacheQuizData() async {
+    // Save categories
+    final categoriesMap = _categories.map((c) => {
+      'id': c.id,
+      'title': c.title,
+      'description': c.description,
+    }).toList();
+    await OfflineStorageService.saveQuizCategories(categoriesMap);
+
+    // Save topics
+    for (final entry in _topics.entries) {
+      final topicsMap = entry.value.map((t) => {
+        'id': t.id,
+        'categoryId': t.categoryId,
+        'title': t.title,
+      }).toList();
+      await OfflineStorageService.cacheData('quiz_topics_${entry.key}', topicsMap);
+    }
+
+    // Save sets
+    for (final entry in _sets.entries) {
+      final setsMap = entry.value.map((s) => {
+        'id': s.id,
+        'topicId': s.topicId,
+        'title': s.title,
+        'timeLimitSec': s.timeLimitSec,
+      }).toList();
+      await OfflineStorageService.cacheData('quiz_sets_${entry.key}', setsMap);
+    }
+
+    // Save questions
+    for (final entry in _questions.entries) {
+      final questionsData = entry.value.map((q) => {
+        'id': q.id,
+        'setId': q.setId,
+        'stem': q.stem,
+        'options': q.options.map((o) => {
+          'id': o.id,
+          'text': o.text,
+          'correct': o.correct,
+        }).toList(),
+        'explanation': q.explanation,
+        'difficulty': q.difficulty,
+      }).toList();
+      await OfflineStorageService.saveQuizQuestions(entry.key, questionsData);
+    }
+  }
+
   final List<QuizCategory> _categories = [
     QuizCategory(id: 'cat_ds', title: 'Data Structures', description: 'Arrays, Trees, Graphs'),
     QuizCategory(id: 'cat_algo', title: 'Algorithms', description: 'Sorting, Searching, DP'),

@@ -11,6 +11,7 @@ import 'home/components/friends_section.dart';
 import 'settings_screen_modern.dart';
 import 'login_screen.dart';
 import 'package:provider/provider.dart';
+import '../widgets/offline_indicator.dart';
 
 class HomeScreenV3 extends StatefulWidget {
   const HomeScreenV3({super.key});
@@ -95,7 +96,14 @@ class _HomeScreenV3State extends State<HomeScreenV3> {
       backgroundColor: isDark ? const Color(0xFF1A1A2E) : const Color(0xFFFEF7FA),
       body: Stack(
         children: [
-          IndexedStack(index: _selectedIndex, children: pages),
+          Column(
+            children: [
+              const OfflineIndicator(),
+              Expanded(
+                child: IndexedStack(index: _selectedIndex, children: pages),
+              ),
+            ],
+          ),
           Positioned(
             left: 0,
             right: 0,

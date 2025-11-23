@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:path_provider/path_provider.dart';
 import '../providers/app_state_provider.dart';
 import '../theme/app_theme.dart';
+import '../services/offline_storage_service.dart';
 
 class NotesScreen extends StatefulWidget {
   const NotesScreen({super.key});
@@ -70,6 +71,21 @@ class _NotesScreenState extends State<NotesScreen>
   }
 
   void _autoSave() {
+    // Save to both file system and offline storage
+    final title = _titleController.text.isNotEmpty ? _titleController.text : 'untitled';
+    final content = _contentController.text;
+    
+    // Save to offline storage
+    final noteData = {
+      'title': title,
+      'content': content,
+      'timestamp': DateTime.now().toIso8601String(),
+    };
+    OfflineStorageService.saveNote(
+      'note_${DateTime.now().millisecondsSinceEpoch}', 
+      noteData
+    );
+    
     // Show saving indicator for a short time then set lastSaved
     setState(() => _isSaving = true);
     Future.delayed(const Duration(milliseconds: 500), () {

@@ -126,6 +126,7 @@ class _FlashcardsScreenState extends State<FlashcardsScreen> with SingleTickerPr
                     animation: _flipAnimation,
                     builder: (context, child) {
                       final angle = _flipAnimation.value;
+                      final isFront = angle < pi / 2;
                       return Transform(
                         transform: Matrix4.identity()
                           ..setEntry(3, 2, 0.001)
@@ -141,45 +142,50 @@ class _FlashcardsScreenState extends State<FlashcardsScreen> with SingleTickerPr
                             width: double.infinity,
                             padding: const EdgeInsets.all(32),
                             decoration: BoxDecoration(
-                              gradient: angle < pi / 2 ? AppTheme.appGradient : null,
-                                color: angle >= pi / 2 ? Theme.of(context).cardColor : null,
+                              gradient: isFront ? AppTheme.appGradient : null,
+                              color: !isFront ? Theme.of(context).cardColor : null,
                               borderRadius: BorderRadius.circular(24),
                             ),
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Text(
-                                  angle < pi / 2 ? 'Question' : 'Answer',
-                                  style: TextStyle(
-                                    color: (angle < pi / 2 ? Colors.white : Theme.of(context).colorScheme.onSurface)
-                                        .withAlpha((0.6 * 255).round()),
-                                    fontSize: 14,
+                            child: Transform(
+                              transform: Matrix4.identity()
+                                ..rotateY(isFront ? 0 : pi),
+                              alignment: Alignment.center,
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    isFront ? 'Question' : 'Answer',
+                                    style: TextStyle(
+                                      color: (isFront ? Colors.white : Theme.of(context).colorScheme.onSurface)
+                                          .withAlpha((0.6 * 255).round()),
+                                      fontSize: 14,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  angle < pi / 2
-                                      ? activeCards[currentCard].front
-                                      : activeCards[currentCard].back,
-                                  style: TextStyle(
-                                    color: angle < pi / 2
-                                        ? Colors.white
-                                        : Theme.of(context).colorScheme.onSurface,
-                                    fontSize: angle < pi / 2 ? 24 : 20,
-                                    height: 1.5,
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    isFront
+                                        ? activeCards[currentCard].front
+                                        : activeCards[currentCard].back,
+                                    style: TextStyle(
+                                      color: isFront
+                                          ? Colors.white
+                                          : Theme.of(context).colorScheme.onSurface,
+                                      fontSize: isFront ? 24 : 20,
+                                      height: 1.5,
+                                    ),
+                                    textAlign: TextAlign.center,
                                   ),
-                                  textAlign: TextAlign.center,
-                                ),
-                                const SizedBox(height: 32),
-                                Text(
-                                  angle < pi / 2 ? 'Tap to reveal answer' : 'Tap to flip back',
-                                  style: TextStyle(
-                                    color: (angle < pi / 2 ? Colors.white : Theme.of(context).colorScheme.onSurface)
-                                        .withAlpha((0.6 * 255).round()),
-                                    fontSize: 14,
+                                  const SizedBox(height: 32),
+                                  Text(
+                                    isFront ? 'Tap to reveal answer' : 'Tap to flip back',
+                                    style: TextStyle(
+                                      color: (isFront ? Colors.white : Theme.of(context).colorScheme.onSurface)
+                                          .withAlpha((0.6 * 255).round()),
+                                      fontSize: 14,
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
                         ),

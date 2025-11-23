@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/responsive_layout.dart';
+import '../services/connectivity_service.dart';
 import 'create_account_screen.dart';
 import 'home_screen_v3.dart';
 
@@ -88,6 +89,7 @@ class _LogInState extends State<LogIn> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final connectivity = Provider.of<ConnectivityService>(context);
     
     return Form(
       key: _formKey,
@@ -95,6 +97,33 @@ class _LogInState extends State<LogIn> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
         children: [
+          // Offline mode indicator
+          if (connectivity.isOffline)
+            Container(
+              padding: const EdgeInsets.all(8),
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: Colors.orange.withAlpha((0.1 * 255).round()),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.cloud_off, color: Colors.orange, size: 16),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Offline Mode - You can still login if previously logged in',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.orange.shade700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           Icon(
             Icons.school,
             size: AppTheme.scaledFontSize(context, 48),

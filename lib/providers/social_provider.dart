@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/offline_storage_service.dart';
 
 class SocialProvider extends ChangeNotifier {
   // Simple in-memory post state
@@ -50,7 +51,23 @@ class SocialProvider extends ChangeNotifier {
   List<_PostEntry> _cachedBookmarkedEntries = const [];
 
   SocialProvider() {
+    _loadOfflineData();
     _rebuildBookmarkCache();
+  }
+
+  void _loadOfflineData() {
+    // Load liked and bookmarked posts from offline storage
+    final likedPosts = OfflineStorageService.getLikedPosts();
+    _likedPosts.addAll(likedPosts);
+    
+    final bookmarkedPosts = OfflineStorageService.getBookmarkedPosts();
+    _bookmarkedPosts.addAll(bookmarkedPosts);
+    
+    final friends = OfflineStorageService.getFriends();
+    if (friends.isNotEmpty) {
+      _friends.clear();
+      _friends.addAll(friends);
+    }
   }
 
   // Friends state
@@ -83,6 +100,7 @@ class SocialProvider extends ChangeNotifier {
       _likedPosts.add(postId);
       _likeCounts[postId] = ( _likeCounts[postId] ?? 0) + 1;
     }
+    OfflineStorageService.saveLikedPosts(_likedPosts);
     notifyListeners();
   }
 
@@ -93,6 +111,7 @@ class SocialProvider extends ChangeNotifier {
       _bookmarkedPosts.add(postId);
     }
     _rebuildBookmarkCache();
+    OfflineStorageService.saveBookmarkedPosts(_bookmarkedPosts);
     notifyListeners();
   }
 
@@ -120,6 +139,7 @@ class SocialProvider extends ChangeNotifier {
   void acceptFriend(String name) {
     if (_friendRequests.remove(name)) {
       if (!_friends.contains(name)) _friends.add(name);
+      OfflineStorageService.saveFriends(_friends);
       notifyListeners();
     }
   }

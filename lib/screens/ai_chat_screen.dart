@@ -7,6 +7,7 @@ import 'package:file_picker/file_picker.dart';
 import '../theme/app_theme.dart';
 import 'package:provider/provider.dart';
 import '../providers/ai_chat_sessions_provider.dart';
+import '../services/connectivity_service.dart';
 
 class Message {
   final String id;
@@ -277,27 +278,29 @@ class _AIChatScreenState extends State<AIChatScreen> with TickerProviderStateMix
                             ),
                           ),
                           const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              Container(
-                                width: 8,
-                                height: 8,
-                                decoration: const BoxDecoration(
-                                  color: Colors.white,
-                                  shape: BoxShape.circle,
+                          Consumer<ConnectivityService>(
+                            builder: (context, connectivity, _) => Row(
+                              children: [
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    color: connectivity.isOnline ? Colors.white : Colors.orange,
+                                    shape: BoxShape.circle,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(width: 6),
-                              const Text(
-                                'AI Assistant Online',
-                                style: TextStyle(
-                                  color: Colors.white70,
-                                fontSize: 12,
-                                fontFamily: 'Poppins',
-                              ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  connectivity.isOnline ? 'AI Assistant Online' : 'Offline - View only',
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 12,
+                                    fontFamily: 'Poppins',
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
+                          ),
                       ],
                     ),
                   ),

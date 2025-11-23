@@ -35,6 +35,8 @@ import 'screens/topic_overview_screen.dart';
 import 'screens/quick_quiz_screen.dart';
 import 'screens/friends_screen.dart';
 import 'screens/add_friend_screen.dart';
+import 'services/offline_storage_service.dart';
+import 'services/connectivity_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -43,6 +45,9 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // 🔹 Initialize Hive for offline storage
+  await OfflineStorageService.initialize();
 
   final prefs = await SharedPreferences.getInstance();
 
@@ -60,7 +65,24 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => ConnectivityService()),
+        ChangeNotifierProxyProvider<ConnectivityService, AuthProvider>(
+          create: (context) {
+            final auth = AuthProvider();
+            final connectivity = context.read<ConnectivityService>();
+            auth.setConnectivityService(connectivity);
+            return auth;
+          },
+          update: (context, connectivity, previous) {
+            if (previous != null) {
+              previous.setConnectivityService(connectivity);
+              return previous;
+            }
+            final auth = AuthProvider();
+            auth.setConnectivityService(connectivity);
+            return auth;
+          },
+        ),
         ChangeNotifierProvider(create: (_) => StatsProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider(prefs)),
         ChangeNotifierProvider(create: (_) {
