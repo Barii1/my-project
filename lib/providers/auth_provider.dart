@@ -2,6 +2,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/offline_storage_service.dart';
 import '../services/connectivity_service.dart';
+import '../services/database_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AuthProvider with ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -175,6 +177,20 @@ class AuthProvider with ChangeNotifier {
         _fullName = refreshed?.displayName ?? fullName;
         _lastError = null;
 
+        // Save user data to Firestore
+        await DatabaseService().saveUserData(
+          userId: user.uid,
+          userData: {
+            'email': user.email,
+            'fullName': fullName,
+            'displayName': fullName,
+            'provider': 'password',
+            'isVerified': user.emailVerified,
+            'createdAt': FieldValue.serverTimestamp(),
+            'updatedAt': FieldValue.serverTimestamp(),
+          },
+        );
+
         debugPrint('AuthProvider.createAccount success uid=${user.uid}, email=${user.email}');
         notifyListeners();
         return true;
@@ -210,6 +226,34 @@ class AuthProvider with ChangeNotifier {
       _email = null;
       _fullName = null;
       _isOfflineMode = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> updateProfileImage(String uid, String url, String filePath) async {
+    try {
+      // Update user data in Firestore
+      await DatabaseService().saveUserData(
+        userId: uid,
+        userData: {
+          'photoUrl': url,
+          'updatedAt': FieldValue.serverTimestamp(),
+        },
+      );
+      // Optionally also add a record:
+      await DatabaseService().setDocument(
+        collection: 'users/$uid/images',
+        data: {
+          'url': url,
+          'createdAt': FieldValue.serverTimestamp(),
+          'storagePath': filePath,
+          'type': 'profile', // or 'post'
+        },
+      );
+    } catch (e) {
+      debugPrint('Error updating profile image: $e');
+      _lastError = e.toString();
+    } finally {
       notifyListeners();
     }
   }

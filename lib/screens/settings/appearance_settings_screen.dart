@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../providers/theme_provider.dart';
+import '../../services/database_service.dart';
 
 class AppearanceSettingsScreen extends StatelessWidget {
   const AppearanceSettingsScreen({super.key});
@@ -96,6 +98,19 @@ class AppearanceSettingsScreen extends StatelessWidget {
         ),
         activeColor: const Color(0xFF3DA89A),
       ),
+    );
+  }
+
+  Future<void> _saveUserData(String uid, ThemeMode currentTheme) async {
+    await DatabaseService().saveUserData(
+      userId: uid,
+      userData: {
+        'preferences': {
+          'theme': currentTheme == ThemeMode.dark ? 'dark' : 'light',
+          'notifications': {'email': true, 'push': true},
+        },
+        'updatedAt': FieldValue.serverTimestamp(),
+      },
     );
   }
 }

@@ -22,7 +22,7 @@ import 'screens/quizzes_screen.dart';
 import 'screens/quiz_categories_screen.dart';
 import 'screens/notification_screen.dart';
 import 'screens/leaderboard_screen.dart';
-import 'providers/auth_provider.dart';
+import 'providers/auth_provider.dart' as MyAuth;
 import 'providers/stats_provider.dart';
 import 'providers/app_state_provider.dart';
 import 'providers/theme_provider.dart';
@@ -37,7 +37,7 @@ import 'screens/friends_screen.dart';
 import 'screens/add_friend_screen.dart';
 import 'screens/database_test_screen.dart';
 import 'screens/camera_screen.dart';
-import '../chatbot.dart';
+import 'chatbot.dart';
 import 'services/offline_storage_service.dart';
 import 'services/connectivity_service.dart';
 
@@ -48,6 +48,9 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // Configure local Firebase emulators if enabled
+  await _configureFirebaseEmulators();
 
   // 🔹 Initialize Hive for offline storage
   await OfflineStorageService.initialize();
@@ -69,9 +72,9 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => ConnectivityService()),
-        ChangeNotifierProxyProvider<ConnectivityService, AuthProvider>(
+        ChangeNotifierProxyProvider<ConnectivityService, MyAuth.AuthProvider>(
           create: (context) {
-            final auth = AuthProvider();
+            final auth = MyAuth.AuthProvider();
             final connectivity = context.read<ConnectivityService>();
             auth.setConnectivityService(connectivity);
             return auth;
@@ -81,7 +84,7 @@ class MyApp extends StatelessWidget {
               previous.setConnectivityService(connectivity);
               return previous;
             }
-            final auth = AuthProvider();
+            final auth = MyAuth.AuthProvider();
             auth.setConnectivityService(connectivity);
             return auth;
           },
@@ -167,8 +170,8 @@ class MyApp extends StatelessWidget {
                   );
                 case '/settings':
                   final auth =
-                      Provider.of<AuthProvider>(context, listen: false);
-                  final user = {
+                      Provider.of<MyAuth.AuthProvider>(context, listen: false);
+                  final Map<String, String> user = {
                     'name': auth.fullName ?? 'User',
                     'email': auth.email ?? '',
                   };
@@ -252,3 +255,12 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+
+// Configure Firebase emulators (optional: for local debugging)
+// Move emulator setup inside main after initialization
+Future<void> _configureFirebaseEmulators() async {
+  // Intentionally left empty. To use local emulators, add:
+  // FirebaseFirestore.instance.useFirestoreEmulator('localhost', 8080);
+  // FirebaseAuth.instance.useAuthEmulator('localhost', 9099);
+}
+
