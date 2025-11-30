@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'sub_topics_screen.dart';
-import 'mixed_quiz_screen.dart';
+// import removed: mixed_quiz_screen.dart
 
 typedef StartQuizCallback = void Function(String categoryId);
 typedef NavigateCallback = void Function(String screen);
@@ -151,21 +151,7 @@ class _QuizzesScreenState extends State<QuizzesScreen> {
                 () => widget.onNavigate('notes'),
               ),
               
-              const SizedBox(height: 12),
-              
-              _buildOutlineButton(
-                context,
-                'Random Mixed Quiz',
-                Icons.auto_awesome,
-                () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => const MixedQuizScreen(),
-                    ),
-                  );
-                },
-                iconColor: const Color(0xFF9B59B6),
-              ),
+              // Removed Random Mixed Quiz (redundant feature)
             ],
           ),
         ),

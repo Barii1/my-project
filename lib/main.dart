@@ -39,6 +39,7 @@ import 'screens/database_test_screen.dart';
 import 'screens/camera_screen.dart';
 import 'chatbot.dart';
 import 'services/offline_storage_service.dart';
+import 'services/chat_history_service.dart';
 import 'services/connectivity_service.dart';
 import 'lib/Email Verification/pin_screen.dart' as ev;
 import 'screens/debug_input_screen.dart';
@@ -56,6 +57,8 @@ Future<void> main() async {
 
   // 🔹 Initialize Hive for offline storage
   await OfflineStorageService.initialize();
+  // 🔹 Initialize chat history storage
+  await ChatHistoryService.initialize();
 
   final prefs = await SharedPreferences.getInstance();
 

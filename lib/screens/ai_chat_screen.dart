@@ -4,10 +4,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:google_mlkit_text_recognition/google_mlkit_text_recognition.dart';
+import 'package:syncfusion_flutter_pdf/pdf.dart';
+import 'package:path/path.dart' as p;
 import '../theme/app_theme.dart';
 import 'package:provider/provider.dart';
 import '../providers/ai_chat_sessions_provider.dart';
+import '../services/chat_history_service.dart';
 import '../services/connectivity_service.dart';
+import '../services/groq_service.dart';
 
 class Message {
   final String id;
@@ -52,6 +57,7 @@ class _AIChatScreenState extends State<AIChatScreen> with TickerProviderStateMix
   bool _isLoading = false;
   XFile? _pendingImage;
   PlatformFile? _pendingFile;
+  final TextRecognizer _textRecognizer = TextRecognizer();
 
   @override
   void initState() {
@@ -63,54 +69,88 @@ class _AIChatScreenState extends State<AIChatScreen> with TickerProviderStateMix
     _inputController.addListener(() {
       if (mounted) setState(() {});
     });
-    _messages.add(
-      Message(
-        id: '1',
-        content: 'Hi! I\'m your AI tutor for ${widget.course}. How can I help you today?',
-        isUser: false,
-      ),
-    );
+    _messages.add(Message(
+      id: '1',
+      content: _getWelcomeMessage(),
+      isUser: false,
+    ));
   }
 
-  void _handleSend() {
-    final text = _inputController.text.trim();
-    if (text.isEmpty) return;
+  String _getWelcomeMessage() {
+    final course = widget.course.toLowerCase();
+    
+    // Topic-specific suggestions
+    final suggestions = <String, String>{
+      'arrays & strings': 'Ask me about arrays, strings, time complexity, sliding windows, two pointers, or string manipulation!',
+      'linked lists': 'Ask me about linked lists, pointers, reversing lists, detecting cycles, or fast/slow pointer techniques!',
+      'stacks & queues': 'Ask me about stacks, queues, LIFO/FIFO, monotonic stacks, or implementing queues with stacks!',
+      'trees & bst': 'Ask me about binary trees, BST properties, tree traversal (inorder, preorder, postorder), or balancing!',
+      'heaps & priority queues': 'Ask me about min/max heaps, heap operations, priority queues, or heap sort!',
+      'graphs & dfs/bfs': 'Ask me about graph representation, DFS, BFS, shortest paths, topological sort, or cycle detection!',
+      'dynamic programming': 'Ask me about DP patterns, memoization, tabulation, optimal substructure, or classic DP problems!',
+      'sorting & searching': 'Ask me about sorting algorithms (quick, merge, heap), binary search, or time complexity comparisons!',
+      'hashing': 'Ask me about hash tables, hash functions, collision resolution, or hash map applications!',
+      'greedy algorithms': 'Ask me about greedy strategies, activity selection, Huffman coding, or when to use greedy vs DP!',
+      
+      // Math topics
+      'calculus': 'Ask me about derivatives, integrals, limits, optimization, or applications of calculus!',
+      'linear algebra': 'Ask me about matrices, vectors, eigenvalues, linear transformations, or solving systems!',
+      'statistics & probability': 'Ask me about distributions, hypothesis testing, confidence intervals, or probability rules!',
+      'discrete mathematics': 'Ask me about set theory, logic, combinatorics, graph theory, or number theory!',
+      
+      // General knowledge
+      'world history': 'Ask me about historical events, civilizations, wars, or important historical figures!',
+      'science': 'Ask me about physics, chemistry, biology, or scientific concepts and discoveries!',
+      'literature': 'Ask me about literary works, authors, genres, themes, or literary analysis!',
+      'geography': 'Ask me about countries, capitals, landforms, climate, or world geography facts!',
+    };
+    
+    // Find matching suggestion or use generic one
+    String specificSuggestion = '';
+    for (final entry in suggestions.entries) {
+      if (course.contains(entry.key) || entry.key.contains(course)) {
+        specificSuggestion = entry.value;
+        break;
+      }
+    }
+    
+    // If no specific suggestion found, use generic message
+    if (specificSuggestion.isEmpty) {
+      specificSuggestion = 'Ask me anything you\'d like to learn!';
+    }
+    
+    return 'Hi! I\'m your AI tutor for ${widget.course}. $specificSuggestion';
+  }
 
-    setState(() {
-      _messages.add(Message(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        content: text,
-        isUser: true,
-      ));
-      _inputController.clear();
-      _isLoading = true;
-    });
-    _recordToSession(text);
+  // Extraction helpers
+  Future<String> _extractTextFromImagePath(String imagePath) async {
+    final inputImage = InputImage.fromFilePath(imagePath);
+    final recognizedText = await _textRecognizer.processImage(inputImage);
+    return recognizedText.text.isEmpty ? 'No text found in image' : recognizedText.text;
+  }
 
-    _scrollToBottom();
-    _loadingController.repeat();
+  String _extractTextFromPdfPath(String pdfPath) {
+    final bytes = File(pdfPath).readAsBytesSync();
+    final doc = PdfDocument(inputBytes: bytes);
+    final buffer = StringBuffer();
+    // Limit to first 30 pages for large PDFs to avoid token limits
+    final maxPages = doc.pages.count > 30 ? 30 : doc.pages.count;
+    for (int i = 0; i < maxPages; i++) {
+      buffer.write(PdfTextExtractor(doc).extractText(startPageIndex: i, endPageIndex: i));
+      buffer.write('\n');
+    }
+    doc.dispose();
+    final extracted = buffer.toString();
+    if (extracted.isEmpty) return 'No text extracted from PDF';
+    // If still too long, truncate to ~15000 chars (Groq will chunk further if needed)
+    if (extracted.length > 15000) {
+      return extracted.substring(0, 15000) + '\n\n[Note: PDF truncated to first 15,000 characters due to size]';
+    }
+    return extracted;
+  }
 
-    // Simulate AI response with streaming text
-    Timer(const Duration(seconds: 1), () {
-      if (!mounted) return;
-      final fullText = 'Great question about $text! Let me explain...';
-      final codeBlock = text.toLowerCase().contains('code') || text.toLowerCase().contains('algorithm')
-          ? 'function example() {\n  // Here\'s a sample implementation\n  return "result";\n}'
-          : null;
-
-      setState(() {
-        _messages.add(Message(
-          id: (DateTime.now().millisecondsSinceEpoch + 1).toString(),
-          content: fullText,
-          isUser: false,
-          code: codeBlock,
-        ));
-        _isLoading = false;
-      });
-      _recordToSession(fullText);
-      _scrollToBottom();
-      _loadingController.stop();
-    });
+  Future<String> _extractTextFromTxtPath(String txtPath) async {
+    return await File(txtPath).readAsString();
   }
 
   Future<void> _pickImage(ImageSource source) async {
@@ -118,71 +158,136 @@ class _AIChatScreenState extends State<AIChatScreen> with TickerProviderStateMix
     final image = await picker.pickImage(source: source);
     if (image == null) return;
     if (!mounted) return;
-    setState(() => _pendingImage = image);
-  }
-
-  void _sendPendingImage() {
-    if (_pendingImage == null) return;
     setState(() {
-      _isLoading = true;
-    });
-    _loadingController.repeat();
-    final userMessage = Message(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      content: 'Image question attached',
-      isUser: true,
-      hasImage: true,
-    );
-    _messages.add(userMessage);
-    _pendingImage = null;
-    _recordToSession('Image question attached');
-    Timer(const Duration(seconds: 1), () {
-      if (!mounted) return;
-      final aiMessage = Message(
-        id: (DateTime.now().millisecondsSinceEpoch + 1).toString(),
-        content: 'Got the image! I will walk through its details and help you answer this.',
-        isUser: false,
-      );
-      setState(() {
-        _messages.add(aiMessage);
-        _isLoading = false;
-      });
-      _loadingController.stop();
-      _scrollToBottom();
-      _recordToSession('Got the image! I will walk through its details...');
+      _pendingImage = image;
     });
   }
 
   Future<void> _pickDocument() async {
-    final result = await FilePicker.platform.pickFiles(type: FileType.custom, allowedExtensions: ['pdf']);
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf', 'txt', 'jpg', 'jpeg', 'png'],
+    );
     if (result == null || result.files.isEmpty) return;
     setState(() => _pendingFile = result.files.first);
   }
 
-  void _sendPendingFile() {
-    if (_pendingFile == null) return;
-    setState(() { _isLoading = true; });
-    _loadingController.repeat();
+  void _handleSend() async {
+    final text = _inputController.text.trim();
+    
+    // Check if we have attachments
+    final hasImage = _pendingImage != null;
+    final hasFile = _pendingFile != null;
+    
+    // Need either text or attachment
+    if (text.isEmpty && !hasImage && !hasFile) return;
+
+    // Clear input immediately
+    _inputController.clear();
+    
+    // Build message content
+    String messageContent = text.isNotEmpty ? text : 'Attachment';
+    if (hasImage) messageContent = text.isEmpty ? 'Image attached' : '$text [Image attached]';
+    if (hasFile) messageContent = text.isEmpty ? 'Document: ${_pendingFile!.name}' : '$text [${_pendingFile!.name}]';
+
     final userMessage = Message(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
-      content: 'PDF uploaded: ${_pendingFile!.name}',
+      content: messageContent,
       isUser: true,
+      hasImage: hasImage,
     );
-    _messages.add(userMessage);
-    _recordToSession('PDF uploaded: ${_pendingFile!.name}');
-    _pendingFile = null;
-    Timer(const Duration(seconds: 1), () {
+
+    setState(() {
+      _messages.add(userMessage);
+      _isLoading = true;
+    });
+
+    _recordToSession(messageContent);
+    _loadingController.repeat();
+    _scrollToBottom();
+
+    try {
+      String finalPrompt = text;
+      
+      // Process image if attached
+      if (hasImage) {
+        final imgPath = _pendingImage!.path;
+        _pendingImage = null;
+        final extracted = await _extractTextFromImagePath(imgPath);
+        finalPrompt = text.isNotEmpty 
+          ? '''Context: ${widget.course}
+User Question: $text
+
+Image text extracted: $extracted
+
+Answer the question using the image context.'''
+          : '''You are analyzing an educational image for ${widget.course}.
+
+OCR extracted text:
+$extracted
+
+Provide a clear explanation of what this shows and key concepts.''';
+      }
+      
+      // Process document if attached
+      if (hasFile) {
+        final pathStr = _pendingFile!.path!;
+        final ext = p.extension(pathStr).toLowerCase();
+        _pendingFile = null;
+        
+        String extracted;
+        if (ext == '.pdf') {
+          extracted = _extractTextFromPdfPath(pathStr);
+        } else if (ext == '.txt') {
+          extracted = await _extractTextFromTxtPath(pathStr);
+        } else {
+          extracted = await _extractTextFromImagePath(pathStr);
+        }
+        
+        finalPrompt = text.isNotEmpty
+          ? '''Context: ${widget.course}
+User Question: $text
+
+Document content:
+$extracted
+
+Answer based on the document.'''
+          : '''Summarize this document for ${widget.course}:
+
+$extracted''';
+      }
+      
+      // If no attachments, just use text with context
+      if (!hasImage && !hasFile && text.isNotEmpty) {
+        finalPrompt = 'Context: ${widget.course}\n\nQuestion: $text';
+      }
+
+      final reply = await GroqChatService.sendMessage(finalPrompt);
+      
       if (!mounted) return;
-      final aiMessage = Message(
-        id: (DateTime.now().millisecondsSinceEpoch + 1).toString(),
-        content: 'I will extract key points from the PDF and assist you.',
-        isUser: false,
-      );
-      setState(() { _messages.add(aiMessage); _isLoading = false; });
+      setState(() {
+        _messages.add(Message(
+          id: (DateTime.now().millisecondsSinceEpoch + 1).toString(),
+          content: reply,
+          isUser: false,
+        ));
+        _isLoading = false;
+      });
+      _recordToSession(reply);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _messages.add(Message(
+          id: (DateTime.now().millisecondsSinceEpoch + 1).toString(),
+          content: 'Error: $error',
+          isUser: false,
+        ));
+        _isLoading = false;
+      });
+    } finally {
       _loadingController.stop();
       _scrollToBottom();
-      _recordToSession('Analyzing uploaded PDF...');
-    });
+    }
   }
 
   void _recordToSession(String content) {
@@ -190,6 +295,12 @@ class _AIChatScreenState extends State<AIChatScreen> with TickerProviderStateMix
     try {
       final sessions = Provider.of<AiChatSessionsProvider>(context, listen: false);
       sessions.recordMessage(widget.sessionId!, content);
+      // Persist full message history as well
+      ChatHistoryService.appendMessage(widget.sessionId!, {
+        'content': content,
+        'isUser': true,
+        'timestamp': DateTime.now().toIso8601String(),
+      });
     } catch (_) {}
   }
 
@@ -225,307 +336,317 @@ class _AIChatScreenState extends State<AIChatScreen> with TickerProviderStateMix
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Scaffold(
-      backgroundColor: const Color(0xFFFEF7FA),
+      backgroundColor: isDark ? const Color(0xFF1A1A2E) : const Color(0xFFFEF7FA),
       body: Stack(
         children: [
           Column(
             children: [
-              // Premium Header with Gradient
+              // Header - styled like other screens
               Container(
-                padding: EdgeInsets.only(
-                  top: MediaQuery.of(context).padding.top + 16,
-                  bottom: 20,
-                  left: 24,
-                  right: 24,
-                ),
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Color(0xFF00E5C2), Color(0xFF00A8A8)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(24),
-                    bottomRight: Radius.circular(24),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Color(0x2600A8A8),
-                      blurRadius: 12,
-                      offset: Offset(0, 4),
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF16213E) : Colors.white,
+                  border: Border(
+                    bottom: BorderSide(
+                      color: isDark ? const Color(0xFF2A2E45) : const Color(0xFFE5E7EB),
+                      width: 1,
                     ),
-                  ],
+                  ),
                 ),
-                child: Row(
-                  children: [
-                    IconButton(
-                      onPressed: widget.onBack,
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.course,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                              fontFamily: 'Poppins',
-                            ),
+                child: SafeArea(
+                  bottom: false,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          onPressed: widget.onBack,
+                          icon: Icon(
+                            Icons.arrow_back,
+                            color: isDark ? Colors.white : const Color(0xFF34495E),
                           ),
-                          const SizedBox(height: 4),
-                          Consumer<ConnectivityService>(
-                            builder: (context, connectivity, _) => Row(
-                              children: [
-                                Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                    color: connectivity.isOnline ? Colors.white : Colors.orange,
-                                    shape: BoxShape.circle,
-                                  ),
+                        ),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.course,
+                                style: TextStyle(
+                                  color: isDark ? Colors.white : const Color(0xFF34495E),
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
                                 ),
-                                const SizedBox(width: 6),
-                                Text(
-                                  connectivity.isOnline ? 'AI Assistant Online' : 'Offline - View only',
-                                  style: const TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 12,
-                                    fontFamily: 'Poppins',
-                                  ),
+                              ),
+                              const SizedBox(height: 2),
+                              Consumer<ConnectivityService>(
+                                builder: (context, connectivity, _) => Row(
+                                  children: [
+                                    Container(
+                                      width: 6,
+                                      height: 6,
+                                      decoration: BoxDecoration(
+                                        color: connectivity.isOnline 
+                                          ? const Color(0xFF4DB8A8)
+                                          : Colors.orange,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      connectivity.isOnline ? 'Online' : 'Offline',
+                                      style: TextStyle(
+                                        color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
+                        ),
                       ],
                     ),
                   ),
-                  // Removed flashcards/daily quiz menu per user request.
-                ],
+                ),
               ),
-            ),
 
-            // Messages
-      Expanded(
-        child: ListView.builder(
-          controller: _scrollController,
-          itemCount: _messages.length,
-          itemBuilder: (context, index) {
-            final message = _messages[index];
-            return TweenAnimationBuilder<double>(
-              duration: const Duration(milliseconds: 350),
-              curve: Curves.easeOutCubic,
-              tween: Tween(begin: 0.0, end: 1.0),
-              builder: (context, value, child) {
-                return Transform.translate(
-                  offset: Offset(0, 20 * (1 - value)),
-                  child: Opacity(
-                    opacity: value,
-                    child: child,
-                  ),
-                );
-              },
-              child: _MessageBubble(
-                message: message,
-                copiedId: _copiedMessageId,
-                onCopyCode: _handleCopyCode,
+              // Messages
+              Expanded(
+                child: ListView.builder(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _messages.length,
+                  itemBuilder: (context, index) {
+                    final message = _messages[index];
+                    return _MessageBubble(
+                      message: message,
+                      copiedId: _copiedMessageId,
+                      onCopyCode: _handleCopyCode,
+                    );
+                  },
+                ),
               ),
-            );
-          },
-        ),
-      ),
 
-      // Typing indicator
-      if (_isLoading)
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-          child: const _TypingIndicatorDots(),
-        ),
-
-            // Input
-            Container(
-              padding: EdgeInsets.fromLTRB(
-                24,
-                16,
-                24,
-                16 + MediaQuery.of(context).padding.bottom,
-              ),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
-                        border: Border(
-                          top: BorderSide(
-                            color: Theme.of(context).colorScheme.onSurface.withAlpha((0.1 * 255).round()),
-                          ),
-                        ),
-              ),
-              child: Row(
-                children: [
-                  Row(
+              // Loading indicator
+              if (_isLoading)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                  child: Row(
                     children: [
                       Container(
+                        padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: const Color(0x1A00A8A8),
-                          borderRadius: BorderRadius.circular(12),
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(18),
                         ),
-                        child: IconButton(
-                          onPressed: () => _pickImage(ImageSource.gallery),
-                          icon: const Icon(Icons.image_outlined, color: Color(0xFF00A8A8)),
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: const Color(0x1A00A8A8),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: IconButton(
-                          onPressed: () => _pickImage(ImageSource.camera),
-                          icon: const Icon(Icons.camera_alt_outlined, color: Color(0xFF00A8A8)),
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: const Color(0x1A00A8A8),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: IconButton(
-                          onPressed: _pickDocument,
-                          icon: const Icon(Icons.picture_as_pdf_outlined, color: Color(0xFF00A8A8)),
-                        ),
+                        child: const _TypingIndicatorDots(),
                       ),
                     ],
                   ),
+                ),
+            ],
+          ),
+
+          // Input area
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Container(
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF16213E) : Colors.white,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                ),
+                border: Border(
+                  top: BorderSide(
+                    color: isDark ? const Color(0xFF2A2E45) : const Color(0xFFE5E7EB),
+                  ),
+                ),
+              ),
+              padding: EdgeInsets.fromLTRB(
+                16,
+                16,
+                16,
+                16 + MediaQuery.of(context).padding.bottom,
+              ),
+              child: Row(
+                children: [
+                  // Camera button
+                  Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0x1A00A8A8),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: IconButton(
+                      onPressed: () => _pickImage(ImageSource.camera),
+                      icon: const Icon(Icons.camera_alt_outlined, color: Color(0xFF00A8A8)),
+                      tooltip: 'Take Photo',
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  
+                  // Gallery button
+                  Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0x1A00A8A8),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: IconButton(
+                      onPressed: () => _pickImage(ImageSource.gallery),
+                      icon: const Icon(Icons.image_outlined, color: Color(0xFF00A8A8)),
+                      tooltip: 'Choose Image',
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  
+                  // PDF/Document button
+                  Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0x1A00A8A8),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: IconButton(
+                      onPressed: _pickDocument,
+                      icon: const Icon(Icons.picture_as_pdf_outlined, color: Color(0xFF00A8A8)),
+                      tooltip: 'Upload PDF',
+                    ),
+                  ),
                   const SizedBox(width: 12),
+                  
+                  // Text input
                   Expanded(
                     child: Container(
                       decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surface,
-                            borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                              color: Theme.of(context).colorScheme.onSurface.withAlpha((0.15 * 255).round()),
-                            ),
-                          ),
+                        color: Theme.of(context).colorScheme.surface,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.15),
+                        ),
+                      ),
                       child: TextField(
                         controller: _inputController,
                         onSubmitted: (_) => _handleSend(),
-                        decoration: InputDecoration(
+                        decoration: const InputDecoration(
                           hintText: 'Ask anything...',
-                          filled: true,
-                          fillColor: Colors.transparent,
                           border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(
+                          contentPadding: EdgeInsets.symmetric(
                             horizontal: 16,
                             vertical: 12,
                           ),
-                            hintStyle: TextStyle(
-                              color: Theme.of(context).colorScheme.onSurface.withAlpha((0.5 * 255).round()),
-                            ),
-                        ),
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Row(
-                    children: [
-                      if (_pendingImage != null)
-                        GestureDetector(
-                          onTap: _sendPendingImage,
-                          child: Container(
-                            width: 42,
-                            height: 42,
-                            margin: const EdgeInsets.only(right: 8),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: const Color(0xFF00A8A8)),
-                              image: DecorationImage(
-                                image: FileImage(
-                                  // ignore: deprecated_member_use
-                                  // Using File constructor directly for simplicity
-                                  // (Assumes proper permissions are configured.)
-                                  // Convert XFile path to File
-                                  // ignore warning due to restricted imports
-                                  // This avoids adding dart:io at top; we can inline below.
-                                  // Will be replaced if needed.
-                                  // Using dart:io
-                                  // Provide a minimal inline File instance
-                                  // We add import just above class if missing.
-                                  // Actually we should import dart:io.
-                                  // We'll patch import.
-                                  // placeholder replaced by real File object
-                                  // Implementation adjusts below
-                                  // but analyzer may need dart:io import.
-                                  // We'll patch import at top.
-                                  // final file
-                                  // ignore comments
-                                  File(_pendingImage!.path),
-                                ),
-                                fit: BoxFit.cover,
-                              ),
+                  
+                  // Pending image preview (non-interactive)
+                  if (_pendingImage != null)
+                    Stack(
+                      children: [
+                        Container(
+                          width: 42,
+                          height: 42,
+                          margin: const EdgeInsets.only(right: 8),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFF00A8A8)),
+                            image: DecorationImage(
+                              image: FileImage(File(_pendingImage!.path)),
+                              fit: BoxFit.cover,
                             ),
+                          ),
+                        ),
+                        Positioned(
+                          right: 4,
+                          top: -4,
+                          child: GestureDetector(
+                            onTap: () => setState(() => _pendingImage = null),
                             child: Container(
-                              alignment: Alignment.topRight,
-                              padding: const EdgeInsets.all(4),
-                              child: const Icon(Icons.send, size: 16, color: Colors.white),
+                              width: 20,
+                              height: 20,
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.close, size: 14, color: Colors.white),
                             ),
                           ),
                         ),
-                      if (_pendingFile != null)
-                        GestureDetector(
-                          onTap: _sendPendingFile,
-                          child: Container(
-                            width: 42,
-                            height: 42,
-                            margin: const EdgeInsets.only(right: 8),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: const Color(0xFF00A8A8)),
-                              color: const Color(0xFFE0F2F1),
-                            ),
-                            child: const Center(child: Icon(Icons.picture_as_pdf, size: 20, color: Color(0xFF00A8A8))),
+                      ],
+                    ),
+                  
+                  // Pending file preview (non-interactive)
+                  if (_pendingFile != null)
+                    Stack(
+                      children: [
+                        Container(
+                          width: 42,
+                          height: 42,
+                          margin: const EdgeInsets.only(right: 8),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFF00A8A8)),
+                            color: const Color(0xFFE0F2F1),
+                          ),
+                          child: const Center(
+                            child: Icon(Icons.picture_as_pdf, size: 20, color: Color(0xFF00A8A8)),
                           ),
                         ),
-                      Container(
-                        decoration: BoxDecoration(
-                          gradient: _inputController.text.trim().isEmpty
-                              ? LinearGradient(colors: [Colors.grey.shade400, Colors.grey.shade500])
-                              : AppTheme.appGradient,
-                          borderRadius: BorderRadius.circular(12),
+                        Positioned(
+                          right: 4,
+                          top: -4,
+                          child: GestureDetector(
+                            onTap: () => setState(() => _pendingFile = null),
+                            child: Container(
+                              width: 20,
+                              height: 20,
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.close, size: 14, color: Colors.white),
+                            ),
+                          ),
                         ),
-                        child: IconButton(
-                          onPressed: _inputController.text.trim().isEmpty ? null : _handleSend,
-                          icon: Icon(Icons.send,
-                              color: _inputController.text.trim().isEmpty ? Colors.white70 : Colors.white),
-                          disabledColor: Colors.white70,
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
+                  
+                  // Send button (enabled if text OR attachments present)
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: (_inputController.text.trim().isEmpty && _pendingImage == null && _pendingFile == null)
+                          ? LinearGradient(colors: [Colors.grey.shade400, Colors.grey.shade500])
+                          : AppTheme.appGradient,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: IconButton(
+                      onPressed: (_inputController.text.trim().isEmpty && _pendingImage == null && _pendingFile == null) 
+                          ? null 
+                          : _handleSend,
+                      icon: const Icon(Icons.send, color: Colors.white),
+                    ),
                   ),
                 ],
               ),
             ),
-          ],
-        ),
-      ],
+          ),
+        ],
       ),
     );
   }
-
-
-  
 
   @override
   void dispose() {
     _inputController.dispose();
     _scrollController.dispose();
     _loadingController.dispose();
+    _textRecognizer.close();
     super.dispose();
   }
 }
@@ -550,7 +671,7 @@ class _MessageBubble extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.8,
+          maxWidth: MediaQuery.of(context).size.width * 0.75,
         ),
         decoration: BoxDecoration(
           gradient: message.isUser ? AppTheme.appGradient : null,
@@ -558,162 +679,22 @@ class _MessageBubble extends StatelessWidget {
               ? null
               : (isDark ? const Color(0xFF202124) : Colors.grey.shade100),
           borderRadius: BorderRadius.circular(18),
-          border: message.isUser
-              ? null
-              : Border.all(
-                  color: isDark
-                      ? Colors.white.withAlpha((0.08 * 255).round())
-                      : AppTheme.slate.withAlpha((0.12 * 255).round()),
-                ),
           boxShadow: [
-            if (message.isUser)
-              BoxShadow(
-                color: AppTheme.primary.withAlpha((0.22 * 255).round()),
-                blurRadius: 14,
-                offset: const Offset(0, 6),
-              )
-            else
-              BoxShadow(
-                color: (isDark ? Colors.black : Colors.grey.shade400).withAlpha((0.12 * 255).round()),
-                blurRadius: 12,
-                offset: const Offset(0, 6),
-              ),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
           ],
         ),
         padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (message.isUser)
-              Text(
-                message.content,
-                style: const TextStyle(
-                  color: Colors.white,
-                ),
-              )
-            else
-              _StreamingText(
-                key: ValueKey(message.id),
-                text: message.content,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
-            if (message.hasImage) ...[
-              const SizedBox(height: 8),
-              Container(
-                height: 120,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.black.withAlpha((0.1 * 255).round()),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  Icons.camera_alt,
-                  size: 32,
-                  color: Colors.white.withAlpha((0.5 * 255).round()),
-                ),
-              ),
-            ],
-            if (message.code != null) ...[
-              const SizedBox(height: 12),
-              Container(
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? Theme.of(context).colorScheme.surfaceContainerHighest
-                      : Colors.black87,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Stack(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Text(
-                        message.code!,
-                        style: TextStyle(
-                          color: Colors.white.withAlpha((0.9 * 255).round()),
-                          fontFamily: 'monospace',
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      top: 8,
-                      right: 8,
-                      child: IconButton(
-                        onPressed: () => onCopyCode(message.code!, message.id),
-                        icon: Icon(
-                          copiedId == message.id ? Icons.check : Icons.copy,
-                          size: 20,
-                          color: Colors.white,
-                        ),
-                        color: Colors.white,
-                        splashRadius: 20,
-                        tooltip: 'Copy code',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ],
+        child: Text(
+          message.content,
+          style: TextStyle(
+            color: message.isUser ? Colors.white : Theme.of(context).colorScheme.onSurface,
+          ),
         ),
       ),
-    );
-  }
-}
-
-class _StreamingText extends StatefulWidget {
-  final String text;
-  final TextStyle? style;
-  const _StreamingText({super.key, required this.text, this.style});
-
-  @override
-  State<_StreamingText> createState() => _StreamingTextState();
-}
-
-class _StreamingTextState extends State<_StreamingText>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _anim;
-
-  @override
-  void initState() {
-    super.initState();
-    final length = widget.text.length.clamp(1, 2000);
-    final durationMs = (length * 35).clamp(400, 2500);
-    _controller = AnimationController(
-      vsync: this,
-      duration: Duration(milliseconds: durationMs),
-    );
-    _anim = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
-    _controller.forward();
-  }
-
-  @override
-  void didUpdateWidget(covariant _StreamingText oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.text != widget.text) {
-      _controller
-        ..reset()
-        ..forward();
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _anim,
-      builder: (context, _) {
-        final count = (widget.text.length * _anim.value).floor().clamp(0, widget.text.length);
-        final visible = widget.text.substring(0, count);
-        return Text(visible, style: widget.style);
-      },
     );
   }
 }
@@ -748,33 +729,21 @@ class _TypingIndicatorDotsState extends State<_TypingIndicatorDots> {
 
   @override
   Widget build(BuildContext context) {
-    final baseRaw = Theme.of(context).colorScheme.onSurface;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: List.generate(3, (i) {
         final active = i == _phase;
         return AnimatedContainer(
           duration: const Duration(milliseconds: 220),
-          curve: Curves.easeInOut,
           margin: const EdgeInsets.symmetric(horizontal: 3),
           width: 8,
           height: active ? 10 : 6,
-            decoration: BoxDecoration(
-            color: Color.fromRGBO((baseRaw.toARGB32() >> 16) & 0xFF, (baseRaw.toARGB32() >> 8) & 0xFF, baseRaw.toARGB32() & 0xFF, 0.6 * (active ? 1.0 : 0.5)),
+          decoration: BoxDecoration(
+            color: Colors.grey.withOpacity(active ? 0.8 : 0.4),
             shape: BoxShape.circle,
-            boxShadow: [
-              if (active)
-                BoxShadow(
-                  color: Color.fromRGBO((baseRaw.toARGB32() >> 16) & 0xFF, (baseRaw.toARGB32() >> 8) & 0xFF, baseRaw.toARGB32() & 0xFF, 0.4),
-                  blurRadius: 6,
-                  spreadRadius: 1,
-                ),
-            ],
           ),
         );
       }),
     );
   }
 }
-
-// Mic voice feature removed per user request.

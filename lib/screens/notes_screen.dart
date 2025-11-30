@@ -1,12 +1,14 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:path_provider/path_provider.dart';
-import '../providers/app_state_provider.dart';
+import 'dart:convert';
+import 'package:file_picker/file_picker.dart';
 import '../theme/app_theme.dart';
 import '../services/offline_storage_service.dart';
+import '../services/groq_service.dart';
+import '../services/pdf_extractor_service.dart';
+import '../models/flashcard.dart';
+import 'flashcard_from_pdf_screen.dart';
 
 class NotesScreen extends StatefulWidget {
   const NotesScreen({super.key});
@@ -96,39 +98,151 @@ class _NotesScreenState extends State<NotesScreen>
     });
   }
 
-  void _handleExportPDF() {
-    // Simple export: write markdown content to a .md file in app documents directory
-    final title = _titleController.text.isNotEmpty ? _titleController.text : 'note';
-    final content = _contentController.text;
-    _doExport(title, content);
-  }
-
-  Future<void> _doExport(String title, String content) async {
-    if (!mounted) return;
-    setState(() => _isSaving = true);
-    final messenger = ScaffoldMessenger.of(context);
+  Future<void> _handleImportPDF() async {
     try {
-      final dir = await getApplicationDocumentsDirectory();
-      final file = File('${dir.path}/$title-${DateTime.now().millisecondsSinceEpoch}.md');
-      await file.writeAsString('# $title\n\n$content');
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf'],
+      );
+      if (result == null || result.files.isEmpty) return;
+      final path = result.files.first.path!;
+
       if (!mounted) return;
-      messenger.showSnackBar(SnackBar(content: Text('Exported to ${file.path}')));
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => const Center(
+          child: Card(
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Importing PDF...'),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final extracted = PdfExtractorService.extractText(path);
+      
+      if (!mounted) return;
+      Navigator.of(context).pop(); // Close loading dialog
+
+      setState(() {
+        if (_titleController.text.isEmpty) {
+          _titleController.text = result.files.first.name.replaceAll('.pdf', '');
+        }
+        _contentController.text = extracted;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('PDF imported successfully!')),
+      );
     } catch (e) {
-      if (mounted) messenger.showSnackBar(const SnackBar(content: Text('Export failed')));
-    } finally {
-      if (mounted) setState(() => _isSaving = false);
+      if (!mounted) return;
+      Navigator.of(context).pop(); // Close loading dialog if open
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Import failed: $e')),
+      );
     }
   }
 
-  void _handleConvertToFlashcards() {
-    final title = _titleController.text.isNotEmpty ? _titleController.text : 'Note';
-    final content = _contentController.text;
-    final appState = Provider.of<AppStateProvider>(context, listen: false);
-    appState.addFlashcardsFromNote(title, content);
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Flashcards created from note')));
+  Future<void> _handleConvertToFlashcards() async {
+    // Generate flashcards from current note content
+    final content = _contentController.text.trim();
+    if (content.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please add content first or import a PDF')),
+      );
+      return;
     }
-    Navigator.of(context).pushNamed('/flashcards');
+
+    try {
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => const Center(
+          child: Card(
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Generating flashcards...'),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final flashcardsJson = await GroqChatService.generateFlashcardsFromDocument(content, numCards: 10);
+      final flashcards = _parseFlashcardsJson(flashcardsJson);
+
+      if (!mounted) return;
+      Navigator.of(context).pop(); // Close loading
+
+      if (flashcards.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to generate flashcards')),
+        );
+        return;
+      }
+
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => FlashcardFromPdfScreen(flashcards: flashcards),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      
+      String errorMessage = 'Flashcard generation failed';
+      if (e.toString().contains('rate') || e.toString().contains('limit') || e.toString().contains('429')) {
+        errorMessage = 'API rate limit reached. Please wait a few moments and try again.';
+      } else if (e.toString().contains('Unauthorized') || e.toString().contains('401')) {
+        errorMessage = 'API authentication failed. Please check your API key.';
+      } else if (e.toString().contains('timeout') || e.toString().contains('Timeout')) {
+        errorMessage = 'Request timed out. Please try again with shorter content.';
+      } else {
+        final errMsg = e.toString().split(':').last.trim();
+        errorMessage = 'Flashcard generation failed: ${errMsg.length > 100 ? "${errMsg.substring(0, 100)}..." : errMsg}';
+      }
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          duration: const Duration(seconds: 5),
+          action: SnackBarAction(
+            label: 'OK',
+            onPressed: () {},
+          ),
+        ),
+      );
+    }
+  }
+
+  List<Flashcard> _parseFlashcardsJson(String jsonText) {
+    try {
+      final data = jsonDecode(jsonText) as List;
+      return data.map((card) {
+        return Flashcard.basic(
+          front: card['question'] as String,
+          back: card['answer'] as String,
+        );
+      }).toList();
+    } catch (_) {
+      return [];
+    }
   }
 
   String _formatTime(DateTime date) {
@@ -207,9 +321,9 @@ class _NotesScreenState extends State<NotesScreen>
                     children: [
                       Expanded(
                         child: OutlinedButton.icon(
-                          onPressed: _handleExportPDF,
-                          icon: const Icon(Icons.download_outlined, size: 18),
-                          label: const Text('Export PDF'),
+                          onPressed: _handleImportPDF,
+                          icon: const Icon(Icons.upload_file_outlined, size: 18),
+                          label: const Text('Import PDF'),
                           style: OutlinedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
@@ -236,6 +350,26 @@ class _NotesScreenState extends State<NotesScreen>
                         ),
                       ),
                     ],
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // Create Quiz Button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _generateQuizFromPdf,
+                      icon: const Icon(Icons.quiz_outlined, size: 18),
+                      label: const Text('Create Quiz from Content'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        foregroundColor: Colors.white,
+                        backgroundColor: const Color(0xFF4DB8A8),
+                      ),
+                    ),
                   ),
 
                   const SizedBox(height: 18),
@@ -285,35 +419,6 @@ class _NotesScreenState extends State<NotesScreen>
                   ),
 
                   const SizedBox(height: 18),
-
-                  // Markdown Guide
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surface,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-            Text('Markdown Quick Guide',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w600)),
-                        const SizedBox(height: 10),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: const [
-                            _CodeChip(text: '# Heading'),
-                            _CodeChip(text: '**Bold**'),
-                            _CodeChip(text: '*Italic*'),
-                            _CodeChip(text: '- List item'),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -322,25 +427,214 @@ class _NotesScreenState extends State<NotesScreen>
       ),
     );
   }
+
+  // Generate Quiz from PDF flow
+  Future<void> _generateQuizFromPdf() async {
+    // Generate quiz from current note content (either imported PDF or typed notes)
+    final content = _contentController.text.trim();
+    
+    if (content.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please add content first or import a PDF'),
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
+
+    try {
+      if (!mounted) return;
+      // Show loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => const Center(
+          child: Card(
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 16),
+                  Text('Generating quiz from content...'),
+                  SizedBox(height: 8),
+                  Text(
+                    'This may take a moment',
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      final jsonText = await GroqChatService.generateQuizFromDocument(content, numQuestions: 5);
+      final questions = _parseQuizJson(jsonText);
+
+      if (!mounted) return;
+      Navigator.of(context).pop(); // Close loading dialog
+      
+      if (questions.isEmpty || (questions.length == 1 && questions[0].stem.contains('Failed to parse'))) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to generate quiz. Please try again.'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+        return;
+      }
+
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => _GeneratedQuizPlayScreen(questions: questions),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context).pop(); // Close loading dialog if open
+      
+      String errorMessage = 'Quiz generation failed';
+      if (e.toString().contains('rate') || e.toString().contains('limit') || e.toString().contains('429')) {
+        errorMessage = 'API rate limit reached. Please wait a few moments and try again.';
+      } else if (e.toString().contains('Unauthorized') || e.toString().contains('401')) {
+        errorMessage = 'API authentication failed. Please check your API key.';
+      } else if (e.toString().contains('timeout') || e.toString().contains('Timeout')) {
+        errorMessage = 'Request timed out. Please try again.';
+      } else {
+        final errMsg = e.toString().split(':').last.trim();
+        errorMessage = 'Quiz generation failed: ${errMsg.length > 100 ? "${errMsg.substring(0, 100)}..." : errMsg}';
+      }
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          duration: const Duration(seconds: 5),
+          action: SnackBarAction(
+            label: 'OK',
+            onPressed: () {},
+          ),
+        ),
+      );
+    }
+  }
+
+  // Removed obsolete basic extractor; using PdfExtractorService instead.
+
+  List<_GenQuestion> _parseQuizJson(String jsonText) {
+    try {
+      final data = jsonDecode(jsonText) as List;
+      return data.map((q) {
+        final stem = q['stem'] as String;
+        final optionsData = q['options'] as List;
+        final explanation = (q['explanation'] ?? '') as String;
+        final options = optionsData.map((o) => _GenOption(text: o['text'] as String, correct: o['correct'] as bool)).toList();
+        return _GenQuestion(stem: stem, options: options, explanation: explanation);
+      }).toList();
+    } catch (_) {
+      return [
+        _GenQuestion(
+          stem: 'Failed to parse quiz JSON. Please try another PDF.',
+          options: [
+            _GenOption(text: 'OK', correct: true),
+            _GenOption(text: 'Cancel', correct: false),
+            _GenOption(text: 'Retry', correct: false),
+            _GenOption(text: 'Ignore', correct: false),
+          ],
+          explanation: 'JSON parsing error.',
+        )
+      ];
+    }
+  }
 }
 
-class _CodeChip extends StatelessWidget {
+class _GenQuestion {
+  final String stem;
+  final List<_GenOption> options;
+  final String explanation;
+  _GenQuestion({required this.stem, required this.options, required this.explanation});
+}
+
+class _GenOption {
   final String text;
-  const _CodeChip({required this.text});
+  final bool correct;
+  _GenOption({required this.text, required this.correct});
+}
+
+class _GeneratedQuizPlayScreen extends StatefulWidget {
+  final List<_GenQuestion> questions;
+  const _GeneratedQuizPlayScreen({required this.questions});
+
+  @override
+  State<_GeneratedQuizPlayScreen> createState() => _GeneratedQuizPlayScreenState();
+}
+
+class _GeneratedQuizPlayScreenState extends State<_GeneratedQuizPlayScreen> {
+  int _index = 0;
+  int _score = 0;
+  bool _finished = false;
+
+  void _select(_GenOption opt) {
+    if (_finished) return;
+    if (opt.correct) _score++;
+    setState(() {
+      if (_index == widget.questions.length - 1) {
+        _finished = true;
+      } else {
+        _index++;
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(8),
-  border: Border.all(color: Theme.of(context).colorScheme.onSurface.withAlpha((0.06 * 255).round())),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Scaffold(
+      appBar: AppBar(title: const Text('Generated Quiz')),
+      backgroundColor: isDark ? const Color(0xFF1A1A2E) : const Color(0xFFFEF7FA),
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: _finished ? _result(isDark) : _question(isDark),
       ),
-      child: Text(
-        text,
-        style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withAlpha((0.8 * 255).round())),
+    );
+  }
+
+  Widget _question(bool isDark) {
+    final q = widget.questions[_index];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Question ${_index + 1}/${widget.questions.length}', style: TextStyle(color: isDark ? Colors.white70 : const Color(0xFF64748B))),
+        const SizedBox(height: 12),
+        Text(q.stem, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: isDark ? Colors.white : const Color(0xFF34495E))),
+        const SizedBox(height: 16),
+        ...q.options.map((o) => Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: OutlinedButton(
+            onPressed: () => _select(o),
+            child: Align(alignment: Alignment.centerLeft, child: Text(o.text)),
+          ),
+        )),
+        const SizedBox(height: 16),
+        Text(q.explanation, style: TextStyle(color: isDark ? Colors.white54 : const Color(0xFF64748B))),
+      ],
+    );
+  }
+
+  Widget _result(bool isDark) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('Score: $_score/${widget.questions.length}', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF34495E))),
+          const SizedBox(height: 12),
+          ElevatedButton(onPressed: () => Navigator.pop(context), child: const Text('Done')),
+        ],
       ),
     );
   }
 }
+
+// Removed unused _CodeChip widget

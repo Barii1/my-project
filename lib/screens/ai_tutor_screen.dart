@@ -35,101 +35,165 @@ class _AITutorScreenState extends State<AITutorScreen> {
     
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF1A1A2E) : const Color(0xFFFEF7FA),
-      body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverAppBar(
-              backgroundColor: isDark ? const Color(0xFF1A1A2E) : const Color(0xFFFEF7FA),
-              pinned: true,
-              elevation: 0,
-              title: Row(
-                children: [
-                  Text('AI Tutor', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF34495E))),
-                  const SizedBox(width: 6),
-                  const Text('✨', style: TextStyle(fontSize: 20)),
-                ],
-              ),
-              actions: [
-                IconButton(
-                  tooltip: 'New Chat',
-                  icon: const Icon(Icons.add_comment_outlined),
-                  onPressed: () {
-                    final sessions = Provider.of<AiChatSessionsProvider>(context, listen: false);
-                    final session = sessions.startSession('General');
-                    Navigator.of(context).pushNamed('/ai-chat', arguments: {'course': 'General', 'sessionId': session.id});
-                  },
+      body: Column(
+        children: [
+          // Header styled like SubTopicsScreen
+          Container(
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF16213E) : Colors.white,
+              border: Border(
+                bottom: BorderSide(
+                  color: isDark ? const Color(0xFF2A2E45) : const Color(0xFFFFE6ED),
+                  width: 1,
                 ),
-              ],
+              ),
             ),
-            SliverToBoxAdapter(
+            child: SafeArea(
+              bottom: false,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                child: Row(
                   children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Text(
+                                'AI Tutor',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? Colors.white : const Color(0xFF34495E),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              const Text('✨', style: TextStyle(fontSize: 18)),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          const Text(
+                            'Your personal learning assistant',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'New Chat',
+                      icon: Icon(
+                        Icons.add_comment_outlined,
+                        color: isDark ? Colors.white : const Color(0xFF34495E),
+                      ),
+                      onPressed: () {
+                        final sessions = Provider.of<AiChatSessionsProvider>(context, listen: false);
+                        final session = sessions.startSession('General');
+                        Navigator.of(context).pushNamed('/ai-chat', arguments: {'course': 'General', 'sessionId': session.id});
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          // Content
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                     if (_showCta) ...[
+                      // Styled like SubTopics screen card
                       Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.fromLTRB(20,18,20,16), // reduced height
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [Color(0xFF4DB8A8), Color(0xFF2F8B7E)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
+                          color: isDark ? const Color(0xFF16213E) : Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: isDark ? const Color(0xFF2A2E45) : const Color(0xFF34495E).withOpacity(0.1),
                           ),
-                          borderRadius: BorderRadius.circular(22),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF4DB8A8).withOpacity(0.28),
-                              blurRadius: 14,
-                              offset: const Offset(0, 6),
+                              color: Colors.black.withOpacity(0.04),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
                             ),
                           ],
                         ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                const Icon(Icons.auto_awesome, color: Colors.white, size: 24),
-                                const SizedBox(width: 10),
-                                const Expanded(
-                                  child: Text('Chat with your Ostaad', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white)),
-                                ),
-                                GestureDetector(
-                                  onTap: () => setState(() => _showCta = false),
-                                  child: Container(
-                                    padding: const EdgeInsets.all(4),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withOpacity(0.15),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: const Icon(Icons.close, size: 16, color: Colors.white),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () {
+                              Navigator.of(context).pushNamed('/chat');
+                            },
+                            borderRadius: BorderRadius.circular(16),
+                            child: Padding(
+                              padding: const EdgeInsets.all(20),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      // Icon
+                                      Container(
+                                        width: 48,
+                                        height: 48,
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF4DB8A8).withOpacity(0.15),
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: const Icon(
+                                          Icons.auto_awesome,
+                                          color: Color(0xFF4DB8A8),
+                                          size: 24,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'Chat with your Ostaad',
+                                              style: TextStyle(
+                                                fontSize: 16,
+                                                fontWeight: FontWeight.w600,
+                                                color: isDark ? Colors.white : const Color(0xFF34495E),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              'Ask questions, upload images or PDFs',
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      GestureDetector(
+                                        onTap: () => setState(() => _showCta = false),
+                                        child: Container(
+                                          padding: const EdgeInsets.all(4),
+                                          decoration: BoxDecoration(
+                                            color: (isDark ? Colors.white : Colors.black).withOpacity(0.1),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Icon(Icons.close, size: 16, color: isDark ? Colors.white70 : const Color(0xFF64748B)),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            const Text('Ask questions, upload images or PDFs.', style: TextStyle(color: Colors.white70, fontSize: 12)),
-                            const SizedBox(height: 14),
-                            SizedBox(
-                              height: 40,
-                              child: ElevatedButton.icon(
-                                  onPressed: () {
-                                    Navigator.of(context).pushNamed('/chat');
-                                  },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.white,
-                                  foregroundColor: const Color(0xFF2F8B7E),
-                                  elevation: 0,
-                                  padding: const EdgeInsets.symmetric(horizontal: 18),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                ),
-                                icon: const Icon(Icons.chat_bubble_outline, size: 18),
-                                  label: const Text('Chat Here', style: TextStyle(fontWeight: FontWeight.w600)),
+                                ],
                               ),
                             ),
-                          ],
+                          ),
                         ),
                       ),
                       const SizedBox(height: 22),
@@ -151,28 +215,7 @@ class _AITutorScreenState extends State<AITutorScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 18),
-                    Divider(color: isDark ? const Color(0xFF2A2E45) : const Color(0xFFE2E8F0), height: 1),
-                    const SizedBox(height: 18),
-                    Text('Sessions', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: isDark ? Colors.white : const Color(0xFF34495E))),
-                    const SizedBox(height: 12),
-                    Consumer<AiChatSessionsProvider>(
-                      builder: (context, sessions, _) {
-                        final list = sessions.sessions;
-                        if (list.isEmpty) {
-                          return _emptySessions(isDark);
-                        }
-                        return SizedBox(
-                          height: 105,
-                          child: ListView.builder(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: list.length,
-                            itemBuilder: (c, i) => _sessionChip(context, isDark, list[i]),
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 24),
                     Text('Subjects', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF34495E))),
                     const SizedBox(height: 16),
                     // Filter subjects by search query
@@ -193,12 +236,11 @@ class _AITutorScreenState extends State<AITutorScreen> {
                       },
                     ),
                     const SizedBox(height: 80),
-                  ],
-                ),
+                ],
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -238,46 +280,6 @@ class _AITutorScreenState extends State<AITutorScreen> {
                   Text('Explore', style: TextStyle(fontSize: 12, color: color)),
                 ],
               )
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _emptySessions(bool isDark) {
-    return Container(
-      height: 90,
-      alignment: Alignment.centerLeft,
-      child: Text('No sessions yet. Start a chat!', style: TextStyle(color: isDark ? Colors.white54 : const Color(0xFF64748B))),
-    );
-  }
-
-  Widget _sessionChip(BuildContext context, bool isDark, ChatSession session) {
-    return Container(
-      width: 150,
-      margin: const EdgeInsets.only(right: 10),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF222B45) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? const Color(0xFF2A2E45) : const Color(0xFFE5E7EB)),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () => Navigator.of(context).pushNamed('/ai-chat', arguments: {'course': session.subject, 'sessionId': session.id}),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(Icons.chat_bubble_outline, size: 18, color: Color(0xFF4DB8A8)),
-              const SizedBox(height: 10),
-              Text(session.subject, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: isDark ? Colors.white : const Color(0xFF34495E)), maxLines: 1, overflow: TextOverflow.ellipsis),
-              const SizedBox(height: 4),
-              Expanded(
-                child: Text(session.lastMessage, style: TextStyle(fontSize: 10, color: isDark ? Colors.white54 : const Color(0xFF64748B)), maxLines: 2, overflow: TextOverflow.ellipsis),
-              ),
-              Text('Resume', style: TextStyle(fontSize: 10, color: isDark ? Colors.white54 : const Color(0xFF64748B))),
             ],
           ),
         ),

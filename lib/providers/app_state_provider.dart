@@ -83,14 +83,14 @@ class AppStateProvider with ChangeNotifier {
     final blocks = content.split(RegExp(r"\n\s*\n")).map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
     if (blocks.isEmpty) {
       // fallback: create one flashcard from title and content
-      _flashcards.add(Flashcard(front: title, back: content));
+      _flashcards.add(Flashcard.basic(front: title, back: content));
     } else {
       for (final b in blocks) {
         final lines = b.split('\n').map((l) => l.trim()).where((l) => l.isNotEmpty).toList();
         if (lines.length >= 2) {
-          _flashcards.add(Flashcard(front: lines.first, back: lines.sublist(1).join('\n')));
+          _flashcards.add(Flashcard.basic(front: lines.first, back: lines.sublist(1).join('\n')));
         } else {
-          _flashcards.add(Flashcard(front: title, back: lines.first));
+          _flashcards.add(Flashcard.basic(front: title, back: lines.first));
         }
       }
     }
@@ -140,7 +140,7 @@ class AppStateProvider with ChangeNotifier {
         _flashcards.clear();
         for (final item in data) {
           final map = item as Map<String, dynamic>;
-          _flashcards.add(Flashcard(front: map['front'] ?? '', back: map['back'] ?? ''));
+          _flashcards.add(Flashcard.basic(front: map['front'] ?? '', back: map['back'] ?? ''));
         }
         notifyListeners();
       }

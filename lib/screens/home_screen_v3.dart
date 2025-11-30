@@ -140,20 +140,25 @@ class _HomeScreenV3State extends State<HomeScreenV3> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              'Welcome back, $name! 👋',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white : const Color(0xFF1A1A1A),
+            Expanded(
+              child: Text(
+                'Welcome back, $name! 👋',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : const Color(0xFF1A1A1A),
+                ),
               ),
             ),
             IconButton(
               icon: const Icon(Icons.notifications_outlined, size: 24),
               color: isDark ? Colors.white : const Color(0xFF1A1A1A),
               onPressed: () => Navigator.of(context).pushNamed('/notifications'),
+              constraints: const BoxConstraints(),
+              padding: EdgeInsets.zero,
             ),
           ],
         ),

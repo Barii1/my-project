@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'ai_chat_screen.dart';
 
 class TopicQuizScreen extends StatefulWidget {
   final Map<String, dynamic> topic;
@@ -635,6 +636,23 @@ class _TopicQuizScreenState extends State<TopicQuizScreen> {
             fontWeight: FontWeight.bold,
           ),
         ),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.chat_bubble_outline, color: isDark ? Colors.white : const Color(0xFF34495E)),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AIChatScreen(
+                    course: widget.topic['name'] as String,
+                    onBack: () => Navigator.pop(context),
+                  ),
+                ),
+              );
+            },
+            tooltip: 'Ask AI about ${widget.topic['name']}',
+          ),
+        ],
       ),
       body: SafeArea(
         child: Padding(

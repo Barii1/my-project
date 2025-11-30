@@ -13,8 +13,9 @@ class DatabaseTest {
       print('🔍 Testing Firestore connection...');
 
       // Test 1: Check if Firebase is initialized
-      final firestore = FirebaseFirestore.instance;
-      print('✅ Firebase Firestore instance created');
+      // Touch the instance to avoid unused local warning
+      FirebaseFirestore.instance;
+      print('✅ Firebase Firestore available');
 
       // Test 2: Write a test document
       final testDocId = 'test_${DateTime.now().millisecondsSinceEpoch}';
