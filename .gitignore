@@ -45,3 +45,7 @@ app.*.map.json
 /android/app/release
 
 lib/secrets.dart
+
+lib/emailjs_secrets.dart
+serviceAccountKey.json
+tools/serviceAccountKey.json

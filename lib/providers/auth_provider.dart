@@ -156,7 +156,12 @@ class AuthProvider with ChangeNotifier {
 
   /// CREATE ACCOUNT with Firebase Auth
   /// Returns true on success, false on failure.
-  Future<bool> createAccount(String fullName, String email, String password) async {
+  Future<bool> createAccount(
+  String fullName,
+  String email,
+  String password,
+  String phone,
+) async {
     debugPrint('AuthProvider.createAccount called for email: $email, name: $fullName');
     try {
       final cred = await _auth.createUserWithEmailAndPassword(
@@ -178,17 +183,19 @@ class AuthProvider with ChangeNotifier {
         _lastError = null;
 
         // Save user data to Firestore
+        final userData = {
+          'email': email,
+          'fullName': fullName,
+          'displayName': fullName,
+          'provider': 'password',
+          'isVerified': false,
+          'phone': phone,
+          'createdAt': FieldValue.serverTimestamp(),
+          'updatedAt': FieldValue.serverTimestamp(),
+        };
         await DatabaseService().saveUserData(
           userId: user.uid,
-          userData: {
-            'email': user.email,
-            'fullName': fullName,
-            'displayName': fullName,
-            'provider': 'password',
-            'isVerified': user.emailVerified,
-            'createdAt': FieldValue.serverTimestamp(),
-            'updatedAt': FieldValue.serverTimestamp(),
-          },
+          userData: userData,
         );
 
         debugPrint('AuthProvider.createAccount success uid=${user.uid}, email=${user.email}');

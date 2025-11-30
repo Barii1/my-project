@@ -1,46 +1,55 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /users/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+
+    // Helpers
+    function isSignedIn() {
+      return request.auth != null;
     }
-    match /flashcards/{id} {
-      allow read, write: if request.auth != null && request.auth.uid == request.resource.data.userId;
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
     }
-    match /notes/{id} {
-      allow read, write: if request.auth != null && request.auth.uid == request.resource.data.userId;
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.admin == true;
     }
-    match /ai_sessions/{id} {
-      allow read, write: if request.auth != null && request.auth.uid == request.resource.data.userId;
+
+    // Users collection
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isOwner(userId) || isAdmin();
     }
-    match /ai_sessions/{id}/messages/{mid} {
-      allow read, write: if request.auth != null && request.auth.uid == request.resource.data.userId;
+
+    // User images subcollection
+    match /users/{userId}/images/{imageId} {
+      allow read: if isSignedIn();
+      allow create, update, delete: if isOwner(userId) || isAdmin();
     }
-    // Add similar rules for quizzes, community_posts, comments, leaderboard entries, notifications.
+
+    // Flashcards owned by userId in document data
+    match /flashcards/{docId} {
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow read, update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // Notes owned by userId in document data
+    match /notes/{docId} {
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow read, update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // AI chat sessions and messages owned by userId
+    match /ai_sessions/{sessionId} {
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow read, update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+    match /ai_sessions/{sessionId}/messages/{messageId} {
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow read, update, delete: if isSignedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // PIN verification docs keyed by UID
+    match /pins/{userId} {
+      allow create, update, get, delete: if isOwner(userId) || isAdmin();
+    }
   }
 }
-{
-  "firestore": {
-    "rules": "firestore.rules",
-    "indexes": "firestore.indexes.json"
-  },
-  "flutter": { ...existing flutter metadata... }
-}
-if (kDebugMode) {
-  FirebaseFirestore.instance.useFirestoreEmulator('localhost', 8080);
-  FirebaseAuth.instance.useAuthEmulator('localhost', 9099);
-}
-const functions = require('firebase-functions');
-const admin = require('firebase-admin');
-admin.initializeApp();
-
-exports.onFlashcardCreate = functions.firestore
-  .document('flashcards/{id}')
-  .onCreate(async (snap, ctx) => {
-    const data = snap.data();
-    const uid = data?.userId;
-    if (!uid) return null;
-    const userRef = admin.firestore().doc(`users/${uid}`);
-    await userRef.set({ flashcardCount: admin.firestore.FieldValue.increment(1) }, { merge: true });
-    return null;
-  });

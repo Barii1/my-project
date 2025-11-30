@@ -22,3 +22,6 @@ subprojects {
 tasks.register<Delete>("clean") {
     delete(rootProject.layout.buildDirectory)
 }
+
+// Google Services classpath is managed via pluginManagement in settings.gradle.kts.
+// No buildscript dependencies block is required here when using Kotlin DSL plugins.

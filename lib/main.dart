@@ -40,6 +40,8 @@ import 'screens/camera_screen.dart';
 import 'chatbot.dart';
 import 'services/offline_storage_service.dart';
 import 'services/connectivity_service.dart';
+import 'lib/Email Verification/pin_screen.dart' as ev;
+import 'screens/debug_input_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -245,6 +247,10 @@ class MyApp extends StatelessWidget {
                   return MaterialPageRoute(
                     builder: (context) => const ChatPage(),
                   );
+                case '/email-pin-login':
+                  return MaterialPageRoute(builder: (_) => const ev.LoginScreen());
+                case '/debug-input':
+                  return MaterialPageRoute(builder: (_) => const DebugInputScreen());
                 default:
                   return null;
               }

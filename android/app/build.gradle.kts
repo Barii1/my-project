@@ -45,3 +45,6 @@ android {
 flutter {
     source = "../.."
 }
+
+// Plugin already applied via the plugins block for Kotlin DSL; no Groovy 'apply plugin' needed.
+

@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../providers/auth_provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../providers/auth_provider.dart' as app_auth;
 import '../theme/app_theme.dart';
 import '../widgets/responsive_layout.dart';
+import '../services/email_pin_service.dart';
 import 'login_screen.dart';
 import 'home_screen_v3.dart';
+import '../lib/Email Verification/pin_verify_screen.dart';
 
 class CreateAccountScreen extends StatelessWidget {
   const CreateAccountScreen({super.key});
@@ -47,6 +50,7 @@ class _CreateAccountFormState extends State<CreateAccountForm> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _phoneController = TextEditingController();
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
@@ -57,6 +61,7 @@ class _CreateAccountFormState extends State<CreateAccountForm> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
+    _phoneController.dispose();
     super.dispose();
   }
 
@@ -72,21 +77,46 @@ class _CreateAccountFormState extends State<CreateAccountForm> {
 
     setState(() => _isLoading = true);
     try {
-      final auth = Provider.of<AuthProvider>(context, listen: false);
+      final auth = Provider.of<app_auth.AuthProvider>(context, listen: false);
       final success = await auth.createAccount(
         _nameController.text.trim(),
         _emailController.text.trim(),
         _passwordController.text,
+        _phoneController.text.trim(),
       );
 
       if (!context.mounted) return;
 
       if (success) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const HomeScreenV3()),
-        );
-        return;
+        final user = FirebaseAuth.instance.currentUser;
+        if (user != null && user.email != null) {
+          try {
+            await EmailPinService().sendPin(user.uid, user.email!);
+            if (!context.mounted) return;
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => PinVerifyScreen(uid: user.uid)),
+            );
+            return;
+          } catch (e) {
+            // If sending PIN fails, fall back to home but notify user
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('PIN send failed: $e')),
+            );
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const HomeScreenV3()),
+            );
+            return;
+          }
+        } else {
+          // Fallback if user not available yet
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const HomeScreenV3()),
+          );
+          return;
+        }
       }
 
       final err = auth.lastError ?? 'Failed to create account';
@@ -238,6 +268,26 @@ class _CreateAccountFormState extends State<CreateAccountForm> {
               }
               if (value != _passwordController.text) {
                 return 'Passwords do not match';
+              }
+              return null;
+            },
+          ),
+          SizedBox(height: AppTheme.scaledSize(context, 0, 16).height),
+          TextFormField(
+            controller: _phoneController,
+            keyboardType: TextInputType.phone,
+            style: AppTheme.bodyText(context),
+            decoration: InputDecoration(
+              labelText: 'Phone Number',
+              labelStyle: AppTheme.caption(context),
+              hintText: 'e.g. +8801XXXXXXXXX',
+              hintStyle: AppTheme.caption(context).copyWith(color: Colors.black38),
+              prefixIcon: Icon(Icons.phone_outlined, color: AppTheme.primary),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return 'Please enter your phone number';
               }
               return null;
             },
