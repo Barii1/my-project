@@ -90,7 +90,7 @@ class GroqChatService {
       source = summaries.join('\n');
     }
 
-    final prompt = '''You are a quiz generator. Using ONLY the content below, create ${numQuestions} high-quality multiple-choice questions.
+    final prompt = '''You are a quiz generator. Using ONLY the content below, create $numQuestions high-quality multiple-choice questions.
 
 Content:
 $source
@@ -110,7 +110,7 @@ Output STRICTLY as JSON with this schema:
 ]
 
 Rules:
-- Exactly ${numQuestions} questions.
+- Exactly $numQuestions questions.
 - Exactly 4 options per question.
 - Mark exactly one option as correct.
 - Keep stems concise and unambiguous.
@@ -144,7 +144,7 @@ Rules:
       source = summaries.join('\n');
     }
 
-    final prompt = '''You are a flashcard generator. Using the content below, create ${numCards} high-quality flashcards.
+    final prompt = '''You are a flashcard generator. Using the content below, create $numCards high-quality flashcards.
 
 Content:
 $source
@@ -158,7 +158,7 @@ Output STRICTLY as JSON with this schema:
 ]
 
 Rules:
-- Create exactly ${numCards} flashcards.
+- Create exactly $numCards flashcards.
 - Questions should be clear and concise.
 - Answers should be accurate and complete.
 - Base flashcards on the provided content.
