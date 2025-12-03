@@ -8,65 +8,102 @@ class StreakSummary extends StatefulWidget {
   State<StreakSummary> createState() => _StreakSummaryState();
 }
 
-class _StreakSummaryState extends State<StreakSummary> with SingleTickerProviderStateMixin {
-  late final AnimationController _flameController;
-  late final Animation<double> _flameAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _flameController = AnimationController(vsync: this, duration: const Duration(seconds: 2))..repeat(reverse: true);
-    _flameAnimation = Tween<double>(begin: 0.4, end: 0.8).animate(_flameController);
-  }
-
-  @override
-  void dispose() {
-    _flameController.dispose();
-    super.dispose();
-  }
-
+class _StreakSummaryState extends State<StreakSummary> {
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF4DB8A8), Color(0xFF3DA89A)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: isDark ? const Color(0xFF16213E) : Colors.white,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: const [
-          BoxShadow(color: Color(0x15000000), blurRadius: 8, offset: Offset(0, 2)),
+        border: isDark 
+            ? Border.all(color: const Color(0xFF2A2E45)) 
+            : Border.all(color: const Color(0xFFE5E7EB)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0x08000000),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
         ],
       ),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Current Streak', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.white)),
-              const SizedBox(height: 8),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
-                children: [
-                  Text('${widget.streak}', style: const TextStyle(fontSize: 48, fontWeight: FontWeight.bold, color: Colors.white, height: 1.0)),
-                  const SizedBox(width: 8),
-                  const Text('days', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500, color: Colors.white)),
-                ],
+          // Icon container
+          Container(
+            width: 72,
+            height: 72,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFFFF6B35), Color(0xFFFF8C42)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
-            ],
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: const Color(0xFFFF6B35).withOpacity(0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: const Icon(
+              Icons.whatshot_rounded,
+              color: Colors.white,
+              size: 36,
+            ),
           ),
-          AnimatedBuilder(
-            animation: _flameAnimation,
-            builder: (context, child) {
-              return Transform.scale(
-                scale: 1.0 + (_flameAnimation.value * 0.1),
-                child: const Text('🔥', style: TextStyle(fontSize: 60)),
-              );
-            },
+          const SizedBox(width: 20),
+          // Text content
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Current Streak',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.baseline,
+                  textBaseline: TextBaseline.alphabetic,
+                  children: [
+                    Text(
+                      '${widget.streak}',
+                      style: TextStyle(
+                        fontSize: 36,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : const Color(0xFF1F2937),
+                        height: 1.0,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      widget.streak == 1 ? 'day' : 'days',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          // Chevron icon
+          Icon(
+            Icons.chevron_right,
+            color: isDark ? Colors.white30 : const Color(0xFFD1D5DB),
+            size: 24,
           ),
         ],
       ),

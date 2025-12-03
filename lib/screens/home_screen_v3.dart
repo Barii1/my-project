@@ -10,8 +10,15 @@ import 'home/components/progress_cards_row.dart';
 import 'home/components/friends_section.dart';
 import 'settings_screen_modern.dart';
 import 'login_screen.dart';
+import 'notification_screen.dart';
+import 'daily_quiz_screen.dart';
+import 'flashcards_screen.dart';
+import 'notes_screen.dart';
+import 'daily_goal_screen.dart';
+import 'settings/app_usage_screen.dart';
 import 'package:provider/provider.dart';
 import '../widgets/offline_indicator.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class HomeScreenV3 extends StatefulWidget {
   const HomeScreenV3({super.key});
@@ -22,6 +29,39 @@ class HomeScreenV3 extends StatefulWidget {
 
 class _HomeScreenV3State extends State<HomeScreenV3> {
   int _selectedIndex = 0;
+  int _dailyQuizCount = 0;
+  int _dailyGoal = 3; // Default value, loaded from prefs
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDailyGoal();
+  }
+
+  Future<void> _loadDailyGoal() async {
+    final prefs = await SharedPreferences.getInstance();
+    final today = DateTime.now();
+    final dateKey = '${today.year}-${today.month}-${today.day}';
+    final savedDate = prefs.getString('daily_goal_date') ?? '';
+    
+    // Load the target goal from preferences
+    final targetGoal = prefs.getInt('daily_goal_target') ?? 3;
+    
+    // Reset counter if it's a new day
+    if (savedDate != dateKey) {
+      await prefs.setInt('daily_quiz_count', 0);
+      await prefs.setString('daily_goal_date', dateKey);
+      setState(() {
+        _dailyQuizCount = 0;
+        _dailyGoal = targetGoal;
+      });
+    } else {
+      setState(() {
+        _dailyQuizCount = prefs.getInt('daily_quiz_count') ?? 0;
+        _dailyGoal = targetGoal;
+      });
+    }
+  }
 
   void _onItemTapped(int index) {
     setState(() {
@@ -156,7 +196,10 @@ class _HomeScreenV3State extends State<HomeScreenV3> {
             IconButton(
               icon: const Icon(Icons.notifications_outlined, size: 24),
               color: isDark ? Colors.white : const Color(0xFF1A1A1A),
-              onPressed: () => Navigator.of(context).pushNamed('/notifications'),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const NotificationScreen()),
+              ),
               constraints: const BoxConstraints(),
               padding: EdgeInsets.zero,
             ),
@@ -179,7 +222,7 @@ class _HomeScreenV3State extends State<HomeScreenV3> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSubjectAccuracyCard(),
+        _buildDailyGoalCard(),
         const SizedBox(height: 20),
         _buildWeeklyProgressGraph(),
         const SizedBox(height: 20),
@@ -190,80 +233,104 @@ class _HomeScreenV3State extends State<HomeScreenV3> {
     );
   }
 
-  Widget _buildSubjectAccuracyCard() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+  Widget _buildDailyGoalCard() {
+    final progress = _dailyQuizCount / _dailyGoal;
+    final isComplete = _dailyQuizCount >= _dailyGoal;
     
-    return Container(
+    return InkWell(
+      onTap: () async {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const DailyGoalScreen()),
+        );
+        // Reload goal after returning from settings
+        _loadDailyGoal();
+      },
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF16213E) : Colors.white,
+        gradient: LinearGradient(
+          colors: isComplete
+              ? [const Color(0xFF10B981), const Color(0xFF059669)]
+              : [const Color(0xFF4DB8A8), const Color(0xFF3DA89A)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
         borderRadius: BorderRadius.circular(20),
-        border: isDark ? Border.all(color: const Color(0xFF2A2E45)) : null,
         boxShadow: [
           BoxShadow(
-            color: const Color(0x08000000),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: (isComplete ? const Color(0xFF10B981) : const Color(0xFF4DB8A8))
+                .withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      isComplete ? Icons.check_circle : Icons.flag,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Text(
+                    'Daily Goal',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+              Text(
+                '$_dailyQuizCount/$_dailyGoal',
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
           Text(
-            'Subject Accuracy',
+            isComplete
+                ? '🎉 Goal completed! Great work today!'
+                : 'Complete ${_dailyGoal - _dailyQuizCount} more ${_dailyGoal - _dailyQuizCount == 1 ? "quiz" : "quizzes"} today',
             style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : const Color(0xFF1F2937),
+              fontSize: 14,
+              color: Colors.white.withOpacity(0.95),
             ),
           ),
-          const SizedBox(height: 20),
-          _buildSubjectRow('Computer Science', 78, const Color(0xFF3B82F6)),
-          const SizedBox(height: 16),
-          _buildSubjectRow('Mathematics', 85, const Color(0xFF10B981)),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: LinearProgressIndicator(
+              value: progress.clamp(0.0, 1.0),
+              backgroundColor: Colors.white.withOpacity(0.3),
+              valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+              minHeight: 8,
+            ),
+          ),
         ],
       ),
-    );
-  }
-
-  Widget _buildSubjectRow(String subject, int percentage, Color color) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              subject,
-              style: TextStyle(
-                fontSize: 14,
-                color: isDark ? Colors.white70 : const Color(0xFF6B7280),
-              ),
-            ),
-            Text(
-              '$percentage%',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: color,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: LinearProgressIndicator(
-            value: percentage / 100,
-            minHeight: 8,
-            backgroundColor: const Color(0xFFE5E7EB),
-            valueColor: AlwaysStoppedAnimation(color),
-          ),
-        ),
-      ],
+      ),
     );
   }
 
@@ -274,40 +341,71 @@ class _HomeScreenV3State extends State<HomeScreenV3> {
     final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     final maxHours = 5.0;
     
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF16213E) : Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: isDark ? Border.all(color: const Color(0xFF2A2E45)) : null,
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0x08000000),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+    // Get current day of week (1 = Monday, 7 = Sunday)
+    final now = DateTime.now();
+    final currentDayIndex = now.weekday - 1; // Convert to 0-based index
+    
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const AppUsageScreen(),
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Weekly Progress',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : const Color(0xFF1F2937),
+        );
+      },
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF16213E) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: isDark ? Border.all(color: const Color(0xFF2A2E45)) : null,
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0x08000000),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF3DA89A).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: const Icon(
+                        Icons.analytics_outlined,
+                        color: Color(0xFF3DA89A),
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Study Analytics',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : const Color(0xFF1F2937),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF10B981).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF10B981).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 child: const Text(
                   '20.3 hrs',
                   style: TextStyle(
@@ -333,7 +431,7 @@ class _HomeScreenV3State extends State<HomeScreenV3> {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: List.generate(7, (index) {
               final height = (weekData[index] / maxHours) * 120;
-              final isToday = index == 6; // Sunday is today
+              final isToday = index == currentDayIndex; // Dynamic current day
               
               return GestureDetector(
                 onTap: () {
@@ -386,6 +484,7 @@ class _HomeScreenV3State extends State<HomeScreenV3> {
           ),
         ],
       ),
+      ),
     );
   }
 
@@ -420,23 +519,32 @@ class _HomeScreenV3State extends State<HomeScreenV3> {
           const SizedBox(height: 16),
           _buildQuickActionButton(
             icon: Icons.quiz_outlined,
-            label: 'Daily Quiz',
+            label: 'Weekly Quiz',
             color: const Color(0xFF3B82F6),
-            onTap: () => Navigator.of(context).pushNamed('/dailyQuiz'),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const DailyQuizScreen()),
+            ),
           ),
           const SizedBox(height: 12),
           _buildQuickActionButton(
             icon: Icons.style_outlined,
             label: 'Review Flashcards',
             color: const Color(0xFF8B5CF6),
-            onTap: () => Navigator.of(context).pushNamed('/flashcards'),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const FlashcardsScreen()),
+            ),
           ),
           const SizedBox(height: 12),
           _buildQuickActionButton(
             icon: Icons.note_alt_outlined,
             label: 'New Note',
             color: const Color(0xFF10B981),
-            onTap: () => Navigator.of(context).pushNamed('/notes'),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const NotesScreen()),
+            ),
           ),
           // Chatbot button removed from home screen
         ],

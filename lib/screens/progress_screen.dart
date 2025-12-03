@@ -1,38 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
+import '../providers/stats_provider.dart';
 
 class ProgressScreen extends StatelessWidget {
   const ProgressScreen({super.key});
 
-  static const List<Map<String, Object>> weeklyData = [
-    {'day': 'Mon', 'score': 75.0},
-    {'day': 'Tue', 'score': 82.0},
-    {'day': 'Wed', 'score': 78.0},
-    {'day': 'Thu', 'score': 88.0},
-    {'day': 'Fri', 'score': 85.0},
-    {'day': 'Sat', 'score': 92.0},
-    {'day': 'Sun', 'score': 87.0},
-  ];
-
-  static const List<Map<String, Object>> allBadges = [
-    {'name': '7-Day Streak', 'earned': true, 'icon': '🔥'},
-    {'name': 'Quiz Master', 'earned': true, 'icon': '🎯'},
-    {'name': 'Note Taker', 'earned': true, 'icon': '📝'},
-    {'name': 'AI Explorer', 'earned': false, 'icon': '🤖'},
-    {'name': 'Community Helper', 'earned': false, 'icon': '🤝'},
-    {'name': '30-Day Streak', 'earned': false, 'icon': '⭐'},
-    {'name': 'Perfect Score', 'earned': false, 'icon': '💯'},
-    {'name': 'Early Bird', 'earned': false, 'icon': '🌅'},
-  ];
-
-  static const List<Map<String, Object>> skillTree = [
-    {'skill': 'Data Structures', 'level': 3, 'maxLevel': 5, 'progress': 60.0},
-    {'skill': 'Algorithms', 'level': 2, 'maxLevel': 5, 'progress': 40.0},
-    {'skill': 'Calculus', 'level': 4, 'maxLevel': 5, 'progress': 80.0},
-    {'skill': 'Linear Algebra', 'level': 2, 'maxLevel': 5, 'progress': 35.0},
-  ];
-
-  Widget _buildSimpleBarChart(BuildContext context) {
+  Widget _buildSimpleBarChart(BuildContext context, List<Map<String, Object>> weeklyData) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return SizedBox(
       height: 180,
@@ -76,14 +50,43 @@ class ProgressScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return Consumer<StatsProvider>(
+      builder: (context, stats, _) {
+        final weeklyData = stats.weeklyData;
+        
+        // Dynamic badges based on earned badges
+        final allBadges = [
+          {'name': '7-Day Streak', 'earned': stats.earnedBadges.contains('7-Day Streak'), 'icon': '🔥'},
+          {'name': 'Quiz Master', 'earned': stats.earnedBadges.contains('Quiz Master'), 'icon': '🎯'},
+          {'name': 'Note Taker', 'earned': stats.earnedBadges.contains('Note Taker'), 'icon': '📝'},
+          {'name': 'Perfect Score', 'earned': stats.earnedBadges.contains('Perfect Score'), 'icon': '💯'},
+          {'name': 'AI Explorer', 'earned': stats.earnedBadges.contains('AI Explorer'), 'icon': '🤖'},
+          {'name': 'Community Helper', 'earned': stats.earnedBadges.contains('Community Helper'), 'icon': '🤝'},
+          {'name': '30-Day Streak', 'earned': stats.earnedBadges.contains('30-Day Streak'), 'icon': '⭐'},
+          {'name': 'XP Legend', 'earned': stats.earnedBadges.contains('XP Legend'), 'icon': '👑'},
+          {'name': 'Early Bird', 'earned': stats.earnedBadges.contains('Early Bird'), 'icon': '🌅'},
+        ];
+        
+        // Dynamic skill tree based on subject accuracy
+        final skillTree = stats.subjectAccuracy.entries.map((entry) {
+          final progress = entry.value * 100;
+          final level = (entry.value * 5).floor().clamp(1, 5);
+          return {
+            'skill': entry.key,
+            'level': level,
+            'maxLevel': 5,
+            'progress': progress,
+          };
+        }).toList();
 
-    return Scaffold(
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 28, 24, 96),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+        return Scaffold(
+          body: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(24, 28, 24, 96),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
               // Header
               TweenAnimationBuilder<double>(
                 tween: Tween(begin: 0, end: 1),
@@ -123,7 +126,7 @@ class ProgressScreen extends StatelessWidget {
                         Text('Weekly Performance', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w600)),
                       ]),
                       const SizedBox(height: 12),
-                      _buildSimpleBarChart(context),
+                      _buildSimpleBarChart(context, weeklyData),
                     ],
                   ),
                 ),
@@ -286,5 +289,7 @@ class ProgressScreen extends StatelessWidget {
         ),
       ),
     );
+  },
+);
   }
 }

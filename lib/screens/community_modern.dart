@@ -1,15 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:share_plus/share_plus.dart';
-import 'bookmarks_screen.dart';
-import 'community_study_groups.dart';
-import 'community_questions.dart';
-import 'community_post_detail.dart';
-import 'community_user_profile.dart';
-import 'friends_screen.dart';
-import 'add_friend_screen.dart';
 import 'package:provider/provider.dart';
-import '../providers/social_provider.dart';
-import '../widgets/skeleton.dart';
+import '../providers/auth_provider.dart';
+import '../providers/stats_provider.dart';
+import 'dart:async';
 
 class CommunityModernScreen extends StatefulWidget {
   const CommunityModernScreen({super.key});
@@ -18,724 +11,752 @@ class CommunityModernScreen extends StatefulWidget {
   State<CommunityModernScreen> createState() => _CommunityModernScreenState();
 }
 
-class _CommunityModernScreenState extends State<CommunityModernScreen> {
-  bool _loading = true;
+class _CommunityModernScreenState extends State<CommunityModernScreen> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  Timer? _updateTimer;
+  final List<Map<String, dynamic>> _globalUsers = [];
+  // Demo-only randomizer removed in non-demo mode
 
   @override
   void initState() {
     super.initState();
-    // Simulate brief initial load for skeletons
-    Future.delayed(const Duration(milliseconds: 600), () {
-      if (mounted) setState(() => _loading = false);
-    });
+    _tabController = TabController(length: 2, vsync: this);
+    _initializeLeaderboard();
+    _startPeriodicUpdates();
+  }
+  
+  void _initializeLeaderboard() {
+    _globalUsers.addAll([
+      {'name': 'Ayesha Khan', 'points': 12450, 'streak': 45},
+      {'name': 'Ahmed Ali', 'points': 11890, 'streak': 32},
+      {'name': 'Fatima Malik', 'points': 10320, 'streak': 28},
+      {'name': 'Hassan Raza', 'points': 9850, 'streak': 25},
+      {'name': 'Zainab Ahmed', 'points': 9210, 'streak': 22},
+      {'name': 'Usman Sheikh', 'points': 8790, 'streak': 19},
+      {'name': 'Maryam Siddiqui', 'points': 8340, 'streak': 17},
+      {'name': 'Bilal Hussain', 'points': 7920, 'streak': 15},
+      {'name': 'Sana Iqbal', 'points': 7560, 'streak': 12},
+      {'name': 'Hamza Farooq', 'points': 7180, 'streak': 10},
+      {'name': 'Hira Abbas', 'points': 6850, 'streak': 8},
+      {'name': 'Talha Imran', 'points': 6520, 'streak': 7},
+    ]);
+  }
+  
+  void _startPeriodicUpdates() {
+    // Demo-only updates removed. In non-demo mode, do nothing here.
+    _updateTimer?.cancel();
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _updateTimer?.cancel();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    // Removed unused 'social' variable here; provider used within post widgets.
+    final auth = Provider.of<AuthProvider>(context);
+    final stats = Provider.of<StatsProvider>(context);
+    final currentUserName = auth.fullName ?? 'You';
     
+    // Add current user to leaderboard dynamically
+    final userPoints = stats.totalXp;
+    final userStreak = stats.streakDays;
+    
+    // Create combined list with current user
+    final allUsers = List<Map<String, dynamic>>.from(_globalUsers);
+    final existingUserIndex = allUsers.indexWhere((u) => u['name'] == currentUserName);
+    if (existingUserIndex >= 0) {
+      allUsers[existingUserIndex] = {
+        'name': currentUserName,
+        'points': userPoints,
+        'streak': userStreak,
+      };
+    } else {
+      allUsers.add({
+        'name': currentUserName,
+        'points': userPoints,
+        'streak': userStreak,
+      });
+    }
+    allUsers.sort((a, b) => b['points'].compareTo(a['points']));
+    final globalUsers = allUsers.map((u) => {
+      'name': u['name'],
+      'points': _formatPoints(u['points']),
+      'streak': u['streak'],
+    }).toList();
+
+    final currentUserName2 = currentUserName;
+
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF1A1A2E) : const Color(0xFFFEF7FA),
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Padding(
-                padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Community',
-                                style: TextStyle(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.bold,
-                                  color: isDark ? Colors.white : const Color(0xFF34495E),
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Connect with fellow learners',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: isDark ? Colors.white70 : const Color(0xFF64748B),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          decoration: BoxDecoration(
-                            gradient: const LinearGradient(
-                              colors: [Color(0xFF4DB8A8), Color(0xFF3DA89A)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFF4DB8A8).withOpacity(0.3),
-                                blurRadius: 12,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              onTap: () => Navigator.of(context).pushNamed('/community/create'),
-                              borderRadius: BorderRadius.circular(16),
-                              child: const Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(Icons.add, color: Colors.white, size: 20),
-                                    SizedBox(width: 6),
-                                    Text(
-                                      'Post',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
+        child: Column(
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF16213E) : Colors.white,
+                border: Border(
+                  bottom: BorderSide(
+                    color: isDark ? const Color(0xFF2A2E45) : const Color(0xFFE5E7EB),
+                    width: 1,
+                  ),
                 ),
               ),
-
-              // Quick Access Cards
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _QuickAccessCard(
-                            icon: Icons.group,
-                            label: 'Study Groups',
-                            color: const Color(0xFF3B82F6),
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const CommunityStudyGroupsScreen(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  'Leaderboard',
+                                  style: TextStyle(
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.bold,
+                                    color: isDark ? Colors.white : const Color(0xFF34495E),
+                                    letterSpacing: -0.5,
+                                  ),
                                 ),
-                              );
-                            },
-                            isDark: isDark,
-                          ),
+                                const SizedBox(width: 10),
+                                const Text('🏆', style: TextStyle(fontSize: 28)),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Track your progress and compete with others',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                                letterSpacing: 0.1,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _QuickAccessCard(
-                            icon: Icons.help_outline,
-                            label: 'Q&A',
-                            color: const Color(0xFF10B981),
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const CommunityQuestionsScreen(),
-                                ),
-                              );
-                            },
-                            isDark: isDark,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _QuickAccessCard(
-                            icon: Icons.people_alt_outlined,
-                            label: 'Friends',
-                            color: const Color(0xFF8B5CF6),
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const FriendsScreen(),
-                                ),
-                              );
-                            },
-                            isDark: isDark,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _QuickAccessCard(
-                            icon: Icons.person_add_alt_1,
-                            label: 'Add Friend',
-                            color: const Color(0xFFF59E0B),
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const AddFriendScreen(),
-                                ),
-                              );
-                            },
-                            isDark: isDark,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _QuickAccessCard(
-                            icon: Icons.bookmarks_outlined,
-                            label: 'Bookmarks',
-                            color: const Color(0xFFEC4899),
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const BookmarksScreen(),
-                                ),
-                              );
-                            },
-                            isDark: isDark,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // Posts Section
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Recent Posts',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : const Color(0xFF34495E),
                       ),
-                    ),
-                    SizedBox(height: 16),
-                    if (_loading) ...[
-                      const _PostSkeleton(),
-                      const SizedBox(height: 12),
-                      const _PostSkeleton(),
-                      const SizedBox(height: 12),
-                      const _PostSkeleton(),
-                    ] else ...[
-                      _CommunityPost(
-                      postId: 'post1',
-                      author: 'Alex Morgan',
-                      time: '3h ago',
-                      avatar: '🎓',
-                      content: 'Just aced my Algorithms exam! The dynamic programming section on this app really helped. Thank you! 💯',
-                      comments: 12,
-                      hasImage: false,
-                    ),
-                    SizedBox(height: 12),
-                    _CommunityPost(
-                      postId: 'post2',
-                      author: 'Jordan Lee',
-                      time: '5h ago',
-                      avatar: '💻',
-                      content: 'Created comprehensive notes on Binary Search Trees. Check them out in the notes section!',
-                      comments: 9,
-                      hasImage: true,
-                    ),
-                    SizedBox(height: 12),
-                    _CommunityPost(
-                      postId: 'post3',
-                      author: 'Emily Chen',
-                      time: '1d ago',
-                      avatar: '📚',
-                      content: 'Looking for study partners for the upcoming Discrete Math exam. Anyone interested?',
-                      comments: 15,
-                      hasImage: false,
-                    ),
                     ],
-                    SizedBox(height: 80),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 20),
+                  // Tab Bar
+                  Container(
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF1A1A2E) : const Color(0xFFF3F4F6),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.all(4),
+                    child: TabBar(
+                      controller: _tabController,
+                      indicator: BoxDecoration(
+                        color: isDark ? const Color(0xFF2A2E45) : Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      indicatorSize: TabBarIndicatorSize.tab,
+                      dividerColor: Colors.transparent,
+                      labelColor: isDark ? Colors.white : const Color(0xFF34495E),
+                      unselectedLabelColor: isDark ? Colors.white54 : const Color(0xFF64748B),
+                      labelStyle: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      tabs: const [
+                        Tab(
+                          icon: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.public, size: 18),
+                              SizedBox(width: 8),
+                              Text('Global'),
+                            ],
+                          ),
+                        ),
+                        Tab(
+                          icon: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.people, size: 18),
+                              SizedBox(width: 8),
+                              Text('Friends'),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
+            // Tab Views
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: [
+                  _buildGlobalLeaderboard(isDark, currentUserName2, globalUsers),
+                  _buildFriendsLeaderboard(isDark, currentUserName, stats),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
-}
 
-// Quick Access Card Widget
-class _QuickAccessCard extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
-  final bool isDark;
-
-  const _QuickAccessCard({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.onTap,
-    required this.isDark,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        constraints: const BoxConstraints(minWidth: 140),
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              color.withOpacity(0.2),
-              color.withOpacity(0.05),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: color.withOpacity(0.3),
-            width: 2,
+  String _formatPoints(int points) {
+    if (points >= 1000) {
+      return '${(points / 1000).toStringAsFixed(1)}k';
+    }
+    return points.toString();
+  }
+  
+  Widget _buildGlobalLeaderboard(bool isDark, String currentUserName, List<Map<String, dynamic>> globalUsers) {
+    
+    return CustomScrollView(
+      slivers: [
+        // Top 3 Podium
+        SliverToBoxAdapter(
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
+            child: Column(
+              children: [
+                // Wrap in FittedBox to avoid bottom overflow on small screens
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    // 2nd Place
+                    _buildPodiumCard(
+                      rank: 2,
+                      name: globalUsers[1]['name'] as String,
+                      points: globalUsers[1]['points'] as String,
+                      color: const Color(0xFF94A3B8),
+                      height: 100,
+                      isDark: isDark,
+                    ),
+                    const SizedBox(width: 12),
+                    // 1st Place
+                    _buildPodiumCard(
+                      rank: 1,
+                      name: globalUsers[0]['name'] as String,
+                      points: globalUsers[0]['points'] as String,
+                      color: const Color(0xFFFFD700),
+                      height: 130,
+                      isDark: isDark,
+                      isFirst: true,
+                    ),
+                    const SizedBox(width: 12),
+                    // 3rd Place
+                    _buildPodiumCard(
+                      rank: 3,
+                      name: globalUsers[2]['name'] as String,
+                      points: globalUsers[2]['points'] as String,
+                      color: const Color(0xFFCD7F32),
+                      height: 80,
+                      isDark: isDark,
+                    ),
+                  ],
+                ),
+                ),
+              ],
+            ),
           ),
         ),
+        // Rest of the list
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 120),
+          sliver: SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (context, index) {
+                final user = globalUsers[index + 3];
+                final rank = index + 4;
+                final isCurrentUser = user['name'] == currentUserName;
+                
+                return _buildLeaderboardTile(
+                  rank: rank,
+                  name: user['name'] as String,
+                  points: user['points'] as String,
+                  streak: user['streak'] as int,
+                  isDark: isDark,
+                  isCurrentUser: isCurrentUser,
+                );
+              },
+              childCount: globalUsers.length - 3,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFriendsLeaderboard(bool isDark, String currentUserName, StatsProvider stats) {
+    // Create friends list with numeric points for proper sorting
+    final friendsUsersRaw = [
+      {'name': currentUserName, 'points': stats.totalXp, 'streak': stats.streakDays},
+      {'name': 'Ahmed Ali', 'points': 11890, 'streak': 32},
+      {'name': 'Fatima Malik', 'points': 10320, 'streak': 28},
+      {'name': 'Hassan Raza', 'points': 9850, 'streak': 25},
+      {'name': 'Zainab Ahmed', 'points': 9210, 'streak': 22},
+    ];
+    
+    // Sort by points (highest first)
+    friendsUsersRaw.sort((a, b) => (b['points'] as int).compareTo(a['points'] as int));
+    
+    // Format points for display
+    final friendsUsers = friendsUsersRaw.map((u) => {
+      'name': u['name'],
+      'points': _formatPoints(u['points'] as int),
+      'streak': u['streak'],
+    }).toList();
+    
+    if (friendsUsers.isEmpty) {
+      return Center(
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            Icon(
+              Icons.people_outline,
+              size: 80,
+              color: isDark ? Colors.white24 : Colors.black26,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No friends yet',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+                color: isDark ? Colors.white70 : const Color(0xFF64748B),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Add friends to see their progress',
+              style: TextStyle(
+                fontSize: 15,
+                color: isDark ? Colors.white54 : const Color(0xFF94A3B8),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+    
+    return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 120),
+      itemCount: friendsUsers.length,
+      itemBuilder: (context, index) {
+        final user = friendsUsers[index];
+        final rank = index + 1;
+        final isCurrentUser = user['name'] == currentUserName;
+        
+        return _buildLeaderboardTile(
+          rank: rank,
+          name: user['name'] as String,
+          points: user['points'] as String,
+          streak: user['streak'] as int,
+          isDark: isDark,
+          isCurrentUser: isCurrentUser,
+          showMedal: rank <= 3,
+        );
+      },
+    );
+  }
+
+  Widget _buildPodiumCard({
+    required int rank,
+    required String name,
+    required String points,
+    required Color color,
+    required double height,
+    required bool isDark,
+    bool isFirst = false,
+  }) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (isFirst) ...[
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.15),
+              shape: BoxShape.circle,
+            ),
+            child: const Text('👑', style: TextStyle(fontSize: 28)),
+          ),
+          const SizedBox(height: 8),
+        ],
+        Container(
+          width: isFirst ? 80 : 70,
+          height: isFirst ? 80 : 70,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(
+              colors: [color, color.withOpacity(0.7)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: color.withOpacity(0.5),
+                blurRadius: 16,
+                spreadRadius: 1,
+                offset: const Offset(0, 6),
+              ),
+            ],
+            border: Border.all(
+              color: Colors.white.withOpacity(0.3),
+              width: 3,
+            ),
+          ),
+          child: Center(
+            child: Text(
+              name.substring(0, 1),
+              style: TextStyle(
+                fontSize: isFirst ? 32 : 28,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+                shadows: [
+                  Shadow(
+                    color: Colors.black.withOpacity(0.3),
+                    blurRadius: 4,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Container(
+          width: 95,
+          height: height,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: isDark 
+                ? [const Color(0xFF2A2E45), const Color(0xFF1F2337)]
+                : [Colors.white, const Color(0xFFF9FAFB)],
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+            ),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            border: Border.all(
+              color: color.withOpacity(0.4),
+              width: 2.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: color.withOpacity(0.15),
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                '#$rank',
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                  shadows: [
+                    Shadow(
+                      color: color.withOpacity(0.3),
+                      blurRadius: 2,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                name.split(' ')[0],
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: isDark ? Colors.white : const Color(0xFF34495E),
+                  letterSpacing: 0.2,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 3),
+              Text(
+                '$points pts',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLeaderboardTile({
+    required int rank,
+    required String name,
+    required String points,
+    required int streak,
+    required bool isDark,
+    bool isCurrentUser = false,
+    bool showMedal = false,
+  }) {
+    String getMedal() {
+      if (rank == 1) return '🥇';
+      if (rank == 2) return '🥈';
+      if (rank == 3) return '🥉';
+      return '';
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: isCurrentUser
+            ? (isDark ? const Color(0xFF4DB8A8).withOpacity(0.15) : const Color(0xFF4DB8A8).withOpacity(0.1))
+            : (isDark ? const Color(0xFF2A2E45) : Colors.white),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isCurrentUser
+              ? const Color(0xFF4DB8A8)
+              : (isDark ? const Color(0xFF2A2E45) : const Color(0xFFE5E7EB)),
+          width: isCurrentUser ? 2 : 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: isCurrentUser 
+              ? const Color(0xFF4DB8A8).withOpacity(0.15)
+              : Colors.black.withOpacity(0.04),
+            blurRadius: isCurrentUser ? 12 : 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            // Rank
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                gradient: rank <= 3
+                    ? LinearGradient(
+                        colors: [
+                          const Color(0xFF4DB8A8).withOpacity(0.15),
+                          const Color(0xFF4DB8A8).withOpacity(0.05),
+                        ],
+                      )
+                    : null,
+                color: rank <= 3 
+                    ? null
+                    : (isDark ? const Color(0xFF1A1A2E) : const Color(0xFFF3F4F6)),
+                borderRadius: BorderRadius.circular(12),
+                border: rank <= 3 
+                  ? Border.all(color: const Color(0xFF4DB8A8).withOpacity(0.3), width: 1.5)
+                  : null,
+              ),
+              child: Center(
+                child: showMedal && getMedal().isNotEmpty
+                    ? Text(getMedal(), style: const TextStyle(fontSize: 22))
+                    : Text(
+                        '#$rank',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: rank <= 3
+                            ? const Color(0xFF4DB8A8)
+                            : (isDark ? Colors.white70 : const Color(0xFF64748B)),
+                        ),
+                      ),
+              ),
+            ),
+            const SizedBox(width: 14),
+            // Avatar
             Container(
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: color.withOpacity(0.2),
                 shape: BoxShape.circle,
-              ),
-              child: Icon(
-                icon,
-                color: color,
-                size: 24,
-              ),
-            ),
-            const SizedBox(height: 12),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: isDark ? Colors.white : const Color(0xFF34495E),
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF4DB8A8), Color(0xFF3DA89A)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CommunityPost extends StatelessWidget {
-  final String postId;
-  final String author;
-  final String time;
-  final String avatar;
-  final String content;
-  final int comments;
-  final bool hasImage;
-
-  const _CommunityPost({
-    required this.postId,
-    required this.author,
-    required this.time,
-    required this.avatar,
-    required this.content,
-    required this.comments,
-    this.hasImage = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final social = Provider.of<SocialProvider>(context, listen: false);
-    
-    return InkWell(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => CommunityPostDetailScreen(
-              postId: postId,
-              author: author,
-              time: time,
-              avatar: avatar,
-              content: content,
-              likes: social.likeCount(postId),
-              comments: social.commentCount(postId),
-            ),
-          ),
-        );
-      },
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF16213E) : Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: isDark ? const Color(0xFF2A2E45) : const Color(0xFFFFE6ED), width: 1),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.08),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        padding: const EdgeInsets.all(18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Author info
-          Row(
-            children: [
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => CommunityUserProfileScreen(
-                        username: author,
-                        avatar: avatar,
-                      ),
-                    ),
-                  );
-                },
-                child: Container(
-                  width: 44,
-                  height: 44,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFFEF3C7),
-                    shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF4DB8A8).withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
                   ),
-                  child: Center(
-                    child: Text(
-                      avatar,
-                      style: const TextStyle(fontSize: 20),
-                    ),
+                ],
+              ),
+              child: Center(
+                child: Text(
+                  name.substring(0, 1),
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black26,
+                        blurRadius: 2,
+                      ),
+                    ],
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      author,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 15,
-                        color: isDark ? Colors.white : const Color(0xFF34495E),
-                      ),
-                    ),
-                    Text(
-                      time,
-                      style: TextStyle(
-                        color: isDark ? Colors.white54 : const Color(0xFF94A3B8),
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              IconButton(
-                onPressed: () {},
-                icon: Icon(
-                  Icons.more_horiz,
-                  color: isDark ? Colors.white54 : const Color(0xFF94A3B8),
-                ),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          
-          // Content
-          Text(
-            content,
-            style: TextStyle(
-              fontSize: 15,
-              color: isDark ? Colors.white : const Color(0xFF34495E),
-              height: 1.5,
             ),
-          ),
-          
-          if (hasImage) ...[
-            const SizedBox(height: 12),
+            const SizedBox(width: 14),
+            // Name and streak
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          name,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? Colors.white : const Color(0xFF34495E),
+                            letterSpacing: 0.2,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (isCurrentUser) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF4DB8A8), Color(0xFF3DA89A)],
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF4DB8A8).withOpacity(0.3),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: const Text(
+                            'You',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFF6B35).withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(
+                            color: const Color(0xFFFF6B35).withOpacity(0.3),
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Text('🔥', style: TextStyle(fontSize: 13)),
+                            const SizedBox(width: 4),
+                            Text(
+                              '$streak days',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: isDark ? const Color(0xFFFF8C5A) : const Color(0xFFFF6B35),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            // Points
             Container(
-              height: 160,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
-                color: const Color(0xFFF3F4F6),
+                gradient: LinearGradient(
+                  colors: isDark 
+                    ? [const Color(0xFF1F2937), const Color(0xFF1A1A2E)]
+                    : [const Color(0xFFF9FAFB), const Color(0xFFF3F4F6)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
                 borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Center(
-                child: Icon(
-                  Icons.image,
-                  size: 48,
-                  color: Color(0xFFD1D5DB),
+                border: Border.all(
+                  color: isDark 
+                    ? const Color(0xFF374151)
+                    : const Color(0xFFE5E7EB),
+                  width: 1,
                 ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    points,
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : const Color(0xFF34495E),
+                      letterSpacing: 0.3,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'points',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isDark ? Colors.white54 : const Color(0xFF94A3B8),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
-          
-          const SizedBox(height: 14),
-          
-          // Actions
-          _PostActions(postId: postId, author: author, avatar: avatar, content: content, time: time, isDark: isDark),
-        ],
-      ),
-    ),
-    );
-  }
-}
-
-class _PostSkeleton extends StatelessWidget {
-  const _PostSkeleton();
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF16213E) : Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: isDark ? const Color(0xFF2A2E45) : const Color(0xFFFFE6ED), width: 1),
-      ),
-      padding: const EdgeInsets.all(18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
-          Row(
-            children: [
-              Skeleton(width: 44, height: 44, borderRadius: BorderRadius.all(Radius.circular(22))),
-              SizedBox(width: 12),
-              Expanded(child: Skeleton(width: double.infinity, height: 16)),
-            ],
-          ),
-          SizedBox(height: 12),
-          Skeleton(width: double.infinity, height: 14),
-          SizedBox(height: 8),
-          Skeleton(width: double.infinity, height: 14),
-          SizedBox(height: 8),
-          Skeleton(width: 150, height: 14),
-        ],
-      ),
-    );
-  }
-}
-
-class _ActionButton extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _ActionButton({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 18, color: color),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  color: color,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );
   }
-}
-
-class _SheetAction extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  const _SheetAction({required this.icon, required this.label, required this.onTap});
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return ListTile(
-      leading: Icon(icon, color: isDark ? Colors.white : const Color(0xFF34495E)),
-      title: Text(label, style: TextStyle(color: isDark ? Colors.white : const Color(0xFF34495E))),
-      onTap: onTap,
-    );
-  }
-}
-
-class _PostActions extends StatelessWidget {
-  final String postId;
-  final String author;
-  final String avatar;
-  final String content;
-  final String time;
-  final bool isDark;
-  const _PostActions({required this.postId, required this.author, required this.avatar, required this.content, required this.time, required this.isDark});
-
-  @override
-  Widget build(BuildContext context) {
-    return Selector<SocialProvider, _PostActionState>(
-      selector: (ctx, social) => _PostActionState(
-        liked: social.isLiked(postId),
-        likeCount: social.likeCount(postId),
-        commentCount: social.commentCount(postId),
-        bookmarked: social.isBookmarked(postId),
-      ),
-      builder: (ctx, state, _) {
-        final social = Provider.of<SocialProvider>(context, listen: false);
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _ActionButton(
-              icon: state.liked ? Icons.favorite : Icons.favorite_border,
-              label: '${state.likeCount}',
-              color: const Color(0xFFEC4899),
-              onTap: () => social.toggleLike(postId),
-            ),
-            const SizedBox(width: 20),
-            _ActionButton(
-              icon: Icons.chat_bubble_outline,
-              label: '${state.commentCount}',
-              color: const Color(0xFF3B82F6),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => CommunityPostDetailScreen(
-                    postId: postId,
-                    author: author,
-                    time: time,
-                    avatar: avatar,
-                    content: content,
-                    likes: state.likeCount,
-                    comments: state.commentCount,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            _ActionButton(
-              icon: state.bookmarked ? Icons.bookmark : Icons.bookmark_border,
-              label: 'Save',
-              color: const Color(0xFFF59E0B),
-              onTap: () => social.toggleBookmark(postId),
-            ),
-            const SizedBox(width: 12),
-            _ActionButton(
-              icon: Icons.share_outlined,
-              label: 'Share',
-              color: const Color(0xFF10B981),
-              onTap: () => Share.share('$author: $content'),
-            ),
-            const SizedBox(width: 12),
-            _ActionButton(
-              icon: Icons.more_horiz,
-              label: 'More',
-              color: isDark ? Colors.white54 : const Color(0xFF94A3B8),
-              onTap: () {
-                showModalBottomSheet(
-                  context: context,
-                  backgroundColor: isDark ? const Color(0xFF16213E) : Colors.white,
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                  ),
-                  builder: (_) {
-                    return Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _SheetAction(icon: Icons.link, label: 'Copy Link', onTap: () {
-                            Navigator.pop(context);
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Link copied (placeholder)')));
-                          }),
-                          _SheetAction(icon: Icons.flag_outlined, label: 'Report', onTap: () {
-                            Navigator.pop(context);
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Reported (placeholder)')));
-                          }),
-                          _SheetAction(icon: state.bookmarked ? Icons.bookmark_remove : Icons.bookmark_add_outlined, label: state.bookmarked ? 'Remove Bookmark' : 'Bookmark', onTap: () {
-                            social.toggleBookmark(postId);
-                            Navigator.pop(context);
-                          }),
-                        ],
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-          ],
-        ),
-        );
-      },
-    );
-  }
-}
-
-class _PostActionState {
-  final bool liked;
-  final int likeCount;
-  final int commentCount;
-  final bool bookmarked;
-  const _PostActionState({required this.liked, required this.likeCount, required this.commentCount, required this.bookmarked});
 }

@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../providers/stats_provider.dart';
+import '../services/quiz_attempt_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class DailyQuizScreen extends StatefulWidget {
   const DailyQuizScreen({super.key});
@@ -13,53 +18,226 @@ class _DailyQuizScreenState extends State<DailyQuizScreen> {
       'q': 'What is the time complexity of binary search?',
       'options': ['O(n)', 'O(log n)', 'O(n log n)', 'O(1)'],
       'answer': 1,
+      'subject': 'Algorithms',
     },
     {
       'q': 'Which data structure uses FIFO?',
       'options': ['Stack', 'Queue', 'Tree', 'Graph'],
       'answer': 1,
+      'subject': 'Data Structures',
     },
     {
       'q': 'Which keyword is used to define a constant in Dart?',
       'options': ['var', 'final', 'const', 'let'],
       'answer': 2,
+      'subject': 'Computer Science',
     },
   ];
 
   int _index = 0;
   int _score = 0;
   int? _selected;
+  bool _answered = false;
 
   void _select(int i) {
-    setState(() => _selected = i);
+    if (!_answered) {
+      setState(() => _selected = i);
+    }
   }
 
   void _submit() {
+    if (_selected == null) return;
+    
     final correct = _questions[_index]['answer'] as int;
-    if (_selected != null && _selected == correct) {
+    final isCorrect = _selected == correct;
+    
+    if (isCorrect) {
       _score += 1;
     }
-    setState(() {
-      _selected = null;
+    
+    setState(() => _answered = true);
+    
+    // Show feedback and move to next after delay
+    Future.delayed(const Duration(milliseconds: 3000), () async {
+      if (!mounted) return;
+      
       if (_index < _questions.length - 1) {
-        _index += 1;
+        setState(() {
+          _selected = null;
+          _answered = false;
+          _index += 1;
+        });
       } else {
-        // show result
+        // Quiz complete - handle all async operations first
+        
+        // Update stats
+        final stats = Provider.of<StatsProvider>(context, listen: false);
+        
+        // Track score per subject
+        final Map<String, List<int>> subjectScores = {};
+        for (int i = 0; i < _questions.length; i++) {
+          final subject = _questions[i]['subject'] as String;
+          final answer = _questions[i]['answer'] as int;
+          final userAnswer = i == _index ? _selected : null;
+          final isCorrect = (i < _index) || (i == _index && userAnswer == answer);
+          
+          if (!subjectScores.containsKey(subject)) {
+            subjectScores[subject] = [0, 0]; // [correct, total]
+          }
+          subjectScores[subject]![1] += 1; // total questions
+          if (isCorrect) {
+            subjectScores[subject]![0] += 1; // correct answers
+          }
+        }
+        
+        // Update each subject's accuracy (XP awarded by backend)
+        subjectScores.forEach((subject, scores) {
+          stats.completeQuiz(subject, scores[0], scores[1]);
+        });
+        
+        final percentage = (_score / _questions.length * 100).toInt();
+        final xpEarned = (_score / _questions.length * 100).toInt();
+        
+        // Persist quiz attempt to backend (awards XP server-side)
+        try {
+          final userId = FirebaseAuth.instance.currentUser?.uid;
+          QuizAttemptService.recordAttempt(
+            userId: userId ?? 'anonymous',
+            subject: 'Weekly Quiz',
+            correct: _score,
+            total: _questions.length,
+            xpEarned: xpEarned,
+          );
+        } catch (_) {
+          // Best-effort: ignore failures in UI flow
+        }
+        
+        // Increment daily goal counter
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          final currentCount = prefs.getInt('daily_quiz_count') ?? 0;
+          await prefs.setInt('daily_quiz_count', currentCount + 1);
+        } catch (_) {
+          // Best-effort: ignore failures
+        }
+        
+        // Show result dialog
+        if (!mounted) return;
+        
         showDialog<void>(
           context: context,
           builder: (c) => AlertDialog(
-            title: const Text('Quiz complete'),
-            content: Text('You scored $_score / ${_questions.length}'),
-            actions: [
-              TextButton(onPressed: () => Navigator.of(c).pop(), child: const Text('Close')),
-              ElevatedButton(onPressed: () { Navigator.of(c).pop(); Navigator.of(context).pop(); }, child: const Text('Done')),
-            ],
-          ),
-        );
-        _index = 0;
-        _score = 0;
+            title: Row(
+              children: [
+                Text(percentage >= 70 ? '🎉' : '💪'),
+                const SizedBox(width: 8),
+                const Text('Quiz Complete!'),
+              ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'You scored $_score / ${_questions.length}',
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Text('$percentage% accuracy'),
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF4DB8A8).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text('⭐', style: TextStyle(fontSize: 20)),
+                        const SizedBox(width: 8),
+                        Text(
+                          '+$xpEarned XP Earned!',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF4DB8A8),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(c).pop(),
+                  child: const Text('Close'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(c).pop();
+                    Navigator.of(context).pop();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF4DB8A8),
+                  ),
+                  child: const Text('Done'),
+                ),
+              ],
+            ),
+          );
+        
+        // Reset quiz state
+        setState(() {
+          _index = 0;
+          _score = 0;
+          _selected = null;
+          _answered = false;
+        });
       }
     });
+  }
+
+  Color _getOptionColor(int index) {
+    if (!_answered) {
+      return _selected == index
+          ? const Color(0xFF4DB8A8).withOpacity(0.2)
+          : Colors.transparent;
+    }
+    
+    final correct = _questions[_index]['answer'] as int;
+    if (index == correct) {
+      return Colors.green.withOpacity(0.2);
+    }
+    if (index == _selected && _selected != correct) {
+      return Colors.red.withOpacity(0.2);
+    }
+    return Colors.transparent;
+  }
+  
+  IconData? _getOptionIcon(int index) {
+    if (!_answered) return null;
+    
+    final correct = _questions[_index]['answer'] as int;
+    if (index == correct) {
+      return Icons.check_circle;
+    }
+    if (index == _selected && _selected != correct) {
+      return Icons.cancel;
+    }
+    return null;
+  }
+  
+  Color? _getOptionIconColor(int index) {
+    if (!_answered) return null;
+    
+    final correct = _questions[_index]['answer'] as int;
+    if (index == correct) {
+      return Colors.green;
+    }
+    if (index == _selected && _selected != correct) {
+      return Colors.red;
+    }
+    return null;
   }
 
   @override
@@ -77,7 +255,7 @@ class _DailyQuizScreenState extends State<DailyQuizScreen> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: const Text(
-          'Daily Quiz',
+          'Weekly Quiz',
           style: TextStyle(
             color: Color(0xFF1A1A1A),
             fontWeight: FontWeight.bold,
@@ -155,6 +333,10 @@ class _DailyQuizScreenState extends State<DailyQuizScreen> {
                     ...List.generate(options.length, (i) {
                       final opt = options[i];
                       final selected = _selected == i;
+                      final bgColor = _getOptionColor(i);
+                      final icon = _getOptionIcon(i);
+                      final iconColor = _getOptionIconColor(i);
+                      
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 12.0),
                         child: Material(
@@ -164,15 +346,17 @@ class _DailyQuizScreenState extends State<DailyQuizScreen> {
                             borderRadius: BorderRadius.circular(12),
                             child: Container(
                               decoration: BoxDecoration(
-                                color: selected
-                                    ? const Color(0xFF3DA89A).withOpacity(0.1)
-                                    : const Color(0xFFFEF7FA),
+                                color: bgColor != Colors.transparent 
+                                    ? bgColor
+                                    : (selected
+                                        ? const Color(0xFF3DA89A).withOpacity(0.1)
+                                        : const Color(0xFFFEF7FA)),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
-                                  color: selected
+                                  color: iconColor ?? (selected
                                       ? const Color(0xFF3DA89A)
-                                      : const Color(0xFFFFE6ED),
-                                  width: selected ? 2 : 1,
+                                      : const Color(0xFFFFE6ED)),
+                                  width: selected || icon != null ? 2 : 1,
                                 ),
                               ),
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -184,22 +368,24 @@ class _DailyQuizScreenState extends State<DailyQuizScreen> {
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
                                       border: Border.all(
-                                        color: selected
+                                        color: iconColor ?? (selected
                                             ? const Color(0xFF3DA89A)
-                                            : const Color(0xFFE5E7EB),
+                                            : const Color(0xFFE5E7EB)),
                                         width: 2,
                                       ),
-                                      color: selected
-                                          ? const Color(0xFF3DA89A)
+                                      color: selected || icon != null
+                                          ? (iconColor ?? const Color(0xFF3DA89A))
                                           : Colors.transparent,
                                     ),
-                                    child: selected
-                                        ? const Icon(
-                                            Icons.circle,
-                                            size: 12,
-                                            color: Colors.white,
-                                          )
-                                        : null,
+                                    child: icon != null
+                                        ? Icon(icon, size: 14, color: Colors.white)
+                                        : (selected
+                                            ? const Icon(
+                                                Icons.circle,
+                                                size: 12,
+                                                color: Colors.white,
+                                              )
+                                            : null),
                                   ),
                                   const SizedBox(width: 14),
                                   Expanded(
@@ -207,11 +393,13 @@ class _DailyQuizScreenState extends State<DailyQuizScreen> {
                                       opt,
                                       style: TextStyle(
                                         color: const Color(0xFF1A1A1A),
-                                        fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
+                                        fontWeight: selected || icon != null ? FontWeight.w600 : FontWeight.w400,
                                         fontSize: 15,
                                       ),
                                     ),
                                   ),
+                                  if (icon != null)
+                                    Icon(icon, color: iconColor, size: 24),
                                 ],
                               ),
                             ),

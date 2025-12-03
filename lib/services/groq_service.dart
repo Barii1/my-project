@@ -4,16 +4,15 @@ import 'package:http/http.dart' as http;
 import '../config/runtime_config.dart';
 import '../utils/retry.dart';
 
-/// GroqChatService provides a simple interface to call Groq's
-/// OpenAI-compatible chat completions endpoint.
+/// GroqChatService provides a simple interface to call OpenAI's
+/// chat completions endpoint.
 class GroqChatService {
-  static const String _baseUrl = 'https://api.groq.com/openai/v1/chat/completions';
-  // Recommended Groq model (adjustable):
-  // Use versatile by default per user request.
-  static const String _defaultModel = 'llama-3.1-70b-versatile';
+  static const String _baseUrl = 'https://api.openai.com/v1/chat/completions';
+  // Using GPT-4o-mini as default (fast and affordable)
+  static const String _defaultModel = 'gpt-4o-mini';
   static const List<String> _fallbackModels = [
-    // Keep same family smaller instant first for capacity, then versatile again as last resort.
-    'llama-3.1-8b-instant',
+    // Fallback to GPT-3.5-turbo if needed
+    'gpt-3.5-turbo',
   ];
 
   /// Sends a single-turn user prompt and returns the assistant reply.
@@ -71,6 +70,47 @@ class GroqChatService {
     return sendMessage(finalPrompt, systemPrompt: 'Provide a concise, well-structured answer using bullet points if suitable.');
   }
 
+  /// Summarize text using OpenAI API.
+  /// Returns a concise summary of the provided text.
+  static Future<String> summarizeText(String text, {int maxSummaryLength = 200}) async {
+    if (text.trim().isEmpty) {
+      throw Exception('Text cannot be empty');
+    }
+
+    // For very long text, chunk it first
+    if (text.length > 12000) {
+      final chunks = _chunkForLongDoc(text);
+      final summaries = <String>[];
+      for (final chunk in chunks) {
+        final summary = await _summarizeChunk(chunk, maxSummaryLength ~/ chunks.length);
+        summaries.add(summary);
+      }
+      // Combine and summarize again if needed
+      final combined = summaries.join('\n');
+      if (combined.length > maxSummaryLength * 2) {
+        return await _summarizeChunk(combined, maxSummaryLength);
+      }
+      return combined;
+    }
+
+    return await _summarizeChunk(text, maxSummaryLength);
+  }
+
+  static Future<String> _summarizeChunk(String text, int maxLength) async {
+    final prompt = '''Summarize the following text concisely in about $maxLength words. Focus on the key points and main ideas:
+
+$text
+
+Provide a clear, well-structured summary:''';
+    
+    return await sendMessage(
+      prompt,
+      systemPrompt: 'You are a helpful assistant that creates concise, accurate summaries. Focus on extracting key information and main ideas.',
+      maxTokens: (maxLength * 2).clamp(100, 800),
+      temperature: 0.5,
+    );
+  }
+
   /// Generate multiple-choice quiz questions from a document.
   /// Returns a JSON string containing an array of questions with options and explanations.
   static Future<String> generateQuizFromDocument(String extractedText, {int numQuestions = 5}) async {
@@ -123,7 +163,30 @@ Rules:
       maxTokens: 1200,
       temperature: 0.3,
     );
-    return jsonText;
+    
+    // Strip markdown code blocks if present
+    String cleaned = jsonText.trim();
+    if (cleaned.startsWith('```json')) {
+      cleaned = cleaned.substring(7);
+    } else if (cleaned.startsWith('```')) {
+      cleaned = cleaned.substring(3);
+    }
+    if (cleaned.endsWith('```')) {
+      cleaned = cleaned.substring(0, cleaned.length - 3);
+    }
+    cleaned = cleaned.trim();
+    
+    print('📋 Quiz JSON Response (first 500 chars): ${cleaned.substring(0, cleaned.length > 500 ? 500 : cleaned.length)}');
+    
+    // Validate it's actually JSON
+    try {
+      jsonDecode(cleaned);
+    } catch (e) {
+      print('❌ Invalid JSON received from API: $e');
+      throw Exception('API returned invalid JSON format. Please try again.');
+    }
+    
+    return cleaned;
   }
 
   /// Generate flashcards from document content.
@@ -170,7 +233,30 @@ Rules:
       maxTokens: 1500,
       temperature: 0.3,
     );
-    return jsonText;
+    
+    // Strip markdown code blocks if present
+    String cleaned = jsonText.trim();
+    if (cleaned.startsWith('```json')) {
+      cleaned = cleaned.substring(7);
+    } else if (cleaned.startsWith('```')) {
+      cleaned = cleaned.substring(3);
+    }
+    if (cleaned.endsWith('```')) {
+      cleaned = cleaned.substring(0, cleaned.length - 3);
+    }
+    cleaned = cleaned.trim();
+    
+    print('📋 Flashcard JSON Response (first 500 chars): ${cleaned.substring(0, cleaned.length > 500 ? 500 : cleaned.length)}');
+    
+    // Validate it's actually JSON
+    try {
+      jsonDecode(cleaned);
+    } catch (e) {
+      print('❌ Invalid JSON received from API: $e');
+      throw Exception('API returned invalid JSON format. Please try again.');
+    }
+    
+    return cleaned;
   }
 
   static List<String> _chunkForLongDoc(String text, {int size = 6000}) {
@@ -199,6 +285,10 @@ Rules:
   /// Internal POST with retry/backoff.
   static Future<http.Response> _postWithRetry(Map<String, dynamic> body) {
     return retry(() async {
+      // Debug: Print API key info (first 10 chars only for security)
+      final keyPreview = RuntimeConfig.groqApiKey.substring(0, 10);
+      print('🔑 Using API key starting with: $keyPreview...');
+      
       final resp = await http.post(
         Uri.parse(_baseUrl),
         headers: {
@@ -207,6 +297,13 @@ Rules:
         },
         body: jsonEncode(body),
       ).timeout(const Duration(seconds: 60)); // Increased timeout for complex operations
+      
+      // Debug: Print response status
+      print('📡 Groq API Response Status: ${resp.statusCode}');
+      if (resp.statusCode != 200) {
+        print('❌ Error Response Body: ${resp.body.substring(0, resp.body.length > 200 ? 200 : resp.body.length)}');
+      }
+      
       if (resp.statusCode >= 500) {
         // Retry on server errors.
         throw Exception('Server error ${resp.statusCode}');
@@ -250,13 +347,19 @@ Rules:
 
       final errText = _extractError(resp.body);
       
-      // Handle rate limiting
+      // Handle rate limiting with detailed message
       if (resp.statusCode == 429) {
+        print('⚠️ Rate limit hit. Response: $errText');
+        // Check if it's actually an invalid key masquerading as rate limit
+        if (errText.toLowerCase().contains('invalid') || errText.toLowerCase().contains('authentication')) {
+          throw Exception('Invalid API key. Please check your Groq API key at console.groq.com');
+        }
         throw Exception('Rate limit exceeded. Please wait a few moments before trying again.');
       }
       
       if (resp.statusCode == 401 || resp.statusCode == 403) {
-        throw Exception('Unauthorized with Groq. Check GROQ_API_KEY via --dart-define or secrets.dart.');
+        print('🔒 Authentication error. Key preview: ${RuntimeConfig.groqApiKey.substring(0, 15)}...');
+        throw Exception('Invalid API key. Please verify your Groq API key at console.groq.com');
       }
       
       if (resp.statusCode == 400 && errText.toLowerCase().contains('model')) {

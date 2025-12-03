@@ -1,6 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import '../providers/theme_provider.dart';
+import '../providers/stats_provider.dart';
 import 'settings/appearance_settings_screen.dart';
 import 'settings/notifications_settings_screen.dart';
 import 'settings/help_faq_screen.dart';
@@ -9,9 +14,9 @@ import 'settings/profile_settings_screen.dart';
 import 'settings/data_usage_screen.dart';
 import 'settings/security_settings_screen.dart';
 import 'settings/delete_account_screen.dart';
-import 'database_test_screen.dart';
+import 'settings/app_usage_screen.dart';
 
-class SettingsScreenModern extends StatelessWidget {
+class SettingsScreenModern extends StatefulWidget {
   final Map<String, String> user;
   final VoidCallback onLogout;
 
@@ -20,6 +25,79 @@ class SettingsScreenModern extends StatelessWidget {
     required this.user,
     required this.onLogout,
   });
+
+  @override
+  State<SettingsScreenModern> createState() => _SettingsScreenModernState();
+}
+
+class _SettingsScreenModernState extends State<SettingsScreenModern> {
+  String? _profileImageUrl;
+  bool _isUploadingImage = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfileImage();
+  }
+
+  Future<void> _loadProfileImage() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user?.photoURL != null) {
+      setState(() {
+        _profileImageUrl = user!.photoURL;
+      });
+    }
+  }
+
+  Future<void> _pickAndUploadProfileImage() async {
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 512,
+        maxHeight: 512,
+        imageQuality: 85,
+      );
+
+      if (pickedFile == null) return;
+
+      setState(() => _isUploadingImage = true);
+
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) throw Exception('No user logged in');
+
+      // Upload to Firebase Storage
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child('profile_pictures')
+          .child('${user.uid}.jpg');
+      
+      final uploadTask = storageRef.putFile(File(pickedFile.path));
+      final snapshot = await uploadTask;
+      final downloadUrl = await snapshot.ref.getDownloadURL();
+
+      // Update user profile
+      await user.updatePhotoURL(downloadUrl);
+
+      setState(() {
+        _profileImageUrl = downloadUrl;
+        _isUploadingImage = false;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile picture updated successfully!')),
+        );
+      }
+    } catch (e) {
+      setState(() => _isUploadingImage = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to upload image: $e')),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -94,6 +172,19 @@ class SettingsScreenModern extends StatelessWidget {
                           builder: (context) => const DataUsageScreen()));
                 },
               ),
+              _buildSettingsItem(
+                context,
+                icon: Icons.av_timer,
+                iconColor: const Color(0xFF9B59B6),
+                title: 'App Usage & Screen Time',
+                subtitle: 'Track your study habits',
+                onTap: () {
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const AppUsageScreen()));
+                },
+              ),
             ]),
             const SizedBox(height: 24),
             _buildSectionTitle(context, 'Support'),
@@ -120,19 +211,6 @@ class SettingsScreenModern extends StatelessWidget {
                       context,
                       MaterialPageRoute(
                           builder: (context) => const FeedbackScreen()));
-                },
-              ),
-              _buildSettingsItem(
-                context,
-                icon: Icons.storage_outlined,
-                iconColor: const Color(0xFF16A085),
-                title: 'Test Database Connection',
-                subtitle: 'Verify Firestore',
-                onTap: () {
-                  Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const DatabaseTestScreen()));
                 },
               ),
             ]),
@@ -165,7 +243,7 @@ class SettingsScreenModern extends StatelessWidget {
               ),
             ]),
             const SizedBox(height: 32),
-            _buildLogoutButton(),
+            _buildLogoutButton(context),
           ],
         ),
       ),
@@ -202,48 +280,167 @@ class SettingsScreenModern extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
         children: [
-          const CircleAvatar(
-            radius: 32,
-            backgroundColor: Color(0xFF3DA89A),
-            child: Text(
-              'B',
-              style: TextStyle(fontSize: 28, color: Colors.white),
-            ),
+          Row(
+            children: [
+              GestureDetector(
+                onTap: _isUploadingImage ? null : _pickAndUploadProfileImage,
+                child: Stack(
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF4DB8A8), Color(0xFF3DA89A)],
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF4DB8A8).withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: CircleAvatar(
+                        radius: 32,
+                        backgroundColor: Colors.transparent,
+                        backgroundImage: _profileImageUrl != null
+                            ? NetworkImage(_profileImageUrl!)
+                            : null,
+                        child: _isUploadingImage
+                            ? const CircularProgressIndicator(
+                                color: Colors.white,
+                                strokeWidth: 2,
+                              )
+                            : _profileImageUrl == null
+                                ? Text(
+                                    (widget.user['name'] ?? 'U')[0].toUpperCase(),
+                                    style: const TextStyle(
+                                      fontSize: 28,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  )
+                                : null,
+                      ),
+                    ),
+                    if (!_isUploadingImage)
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF4DB8A8),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                          ),
+                          child: const Icon(
+                            Icons.camera_alt,
+                            size: 14,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 20),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      widget.user['name'] ?? 'User',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : const Color(0xFF34495E),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      widget.user['email'] ?? 'user@example.com',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                onPressed: () {
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => const ProfileSettingsScreen()));
+                },
+                icon: const Icon(Icons.edit_outlined, color: Color(0xFF3DA89A)),
+              ),
+            ],
           ),
-          const SizedBox(width: 20),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: isDark
+                    ? [const Color(0xFF1F2937), const Color(0xFF1A1A2E)]
+                    : [const Color(0xFFFEF7FA), const Color(0xFFF9FAFB)],
+              ),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: const Color(0xFF4DB8A8).withOpacity(0.3),
+                width: 1.5,
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
-                  user['name'] ?? 'User',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : const Color(0xFF34495E),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF4DB8A8).withOpacity(0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.stars_rounded,
+                    color: Color(0xFF4DB8A8),
+                    size: 20,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  user['email'] ?? 'user@example.com',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: isDark ? Colors.white70 : const Color(0xFF64748B),
-                  ),
+                const SizedBox(width: 12),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Total Points',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isDark ? Colors.white60 : const Color(0xFF64748B),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Consumer<StatsProvider>(
+                      builder: (context, stats, _) => Text(
+                        '${stats.totalXp.toString()} XP',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : const Color(0xFF34495E),
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ),
-          IconButton(
-            onPressed: () {
-              Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => const ProfileSettingsScreen()));
-            },
-            icon: const Icon(Icons.edit_outlined, color: Color(0xFF3DA89A)),
           ),
         ],
       ),
@@ -350,7 +547,7 @@ class SettingsScreenModern extends StatelessWidget {
     );
   }
 
-  Widget _buildLogoutButton() {
+  Widget _buildLogoutButton(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
         gradient: const LinearGradient(
@@ -370,7 +567,7 @@ class SettingsScreenModern extends StatelessWidget {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: onLogout,
+          onTap: widget.onLogout,
           borderRadius: BorderRadius.circular(16),
           child: const Padding(
             padding: EdgeInsets.symmetric(vertical: 16),
