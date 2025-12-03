@@ -84,6 +84,26 @@ class _AITutorScreenState extends State<AITutorScreen> {
                       ),
                     ),
                     IconButton(
+                      tooltip: 'Chat History',
+                      icon: Icon(
+                        Icons.history,
+                        color: isDark ? Colors.white : const Color(0xFF34495E),
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).pushNamed('/history');
+                      },
+                    ),
+                    IconButton(
+                      tooltip: 'My Notes',
+                      icon: Icon(
+                        Icons.note_outlined,
+                        color: isDark ? Colors.white : const Color(0xFF34495E),
+                      ),
+                      onPressed: () {
+                        Navigator.of(context).pushNamed('/notes');
+                      },
+                    ),
+                    IconButton(
                       tooltip: 'New Chat',
                       icon: Icon(
                         Icons.add_comment_outlined,

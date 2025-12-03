@@ -152,6 +152,110 @@ class _NotesScreenState extends State<NotesScreen>
     }
   }
 
+  void _handleSummarizeContent() async {
+    final content = _contentController.text.trim();
+    if (content.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter some content to summarize')),
+      );
+      return;
+    }
+
+    if (content.length < 100) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Content is too short to summarize. Add more text.')),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (c) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Summarizing your notes...'),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    try {
+      final summary = await GroqChatService.summarizeText(content);
+      if (!mounted) return;
+      Navigator.of(context).pop();
+
+      // Show summary in a dialog
+      showDialog(
+        context: context,
+        builder: (c) => AlertDialog(
+          title: const Row(
+            children: [
+              Icon(Icons.summarize, color: Color(0xFF9B59B6)),
+              SizedBox(width: 8),
+              Text('Summary'),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Text(summary),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(c).pop(),
+              child: const Text('Close'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(c).pop();
+                // Replace content with summary
+                _contentController.text = summary;
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF9B59B6),
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Use Summary'),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context).pop();
+      
+      String errorMessage = 'Summarization failed';
+      if (e.toString().contains('rate') || e.toString().contains('limit') || e.toString().contains('429')) {
+        errorMessage = 'API rate limit reached. Please wait a few moments and try again.';
+      } else if (e.toString().contains('Unauthorized') || e.toString().contains('401')) {
+        errorMessage = 'API authentication failed. Please check your API key.';
+      } else if (e.toString().contains('timeout') || e.toString().contains('Timeout')) {
+        errorMessage = 'Request timed out. Please try again with shorter content.';
+      } else {
+        final errMsg = e.toString().split(':').last.trim();
+        errorMessage = 'Summarization failed: ${errMsg.length > 100 ? "${errMsg.substring(0, 100)}..." : errMsg}';
+      }
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMessage),
+          duration: const Duration(seconds: 5),
+          action: SnackBarAction(
+            label: 'OK',
+            onPressed: () {},
+          ),
+        ),
+      );
+    }
+  }
+
   Future<void> _handleConvertToFlashcards() async {
     // Generate flashcards from current note content
     final content = _contentController.text.trim();
@@ -316,7 +420,7 @@ class _NotesScreenState extends State<NotesScreen>
 
                   const SizedBox(height: 18),
 
-                  // Action Buttons
+                  // Action Buttons Row 1
                   Row(
                     children: [
                       Expanded(
@@ -336,9 +440,32 @@ class _NotesScreenState extends State<NotesScreen>
                       const SizedBox(width: 12),
                       Expanded(
                         child: ElevatedButton.icon(
+                          onPressed: _handleSummarizeContent,
+                          icon: const Icon(Icons.summarize_outlined, size: 18),
+                          label: const Text('Summarize'),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            foregroundColor: Colors.white,
+                            backgroundColor: const Color(0xFF9B59B6),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // Action Buttons Row 2
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
                           onPressed: _handleConvertToFlashcards,
                           icon: const Icon(Icons.credit_card_outlined, size: 18),
-                          label: const Text('To Flashcards'),
+                          label: const Text('Flashcards'),
                           style: ElevatedButton.styleFrom(
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             shape: RoundedRectangleBorder(
@@ -349,27 +476,23 @@ class _NotesScreenState extends State<NotesScreen>
                           ),
                         ),
                       ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  // Create Quiz Button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: _generateQuizFromPdf,
-                      icon: const Icon(Icons.quiz_outlined, size: 18),
-                      label: const Text('Create Quiz from Content'),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: _generateQuizFromPdf,
+                          icon: const Icon(Icons.quiz_outlined, size: 18),
+                          label: const Text('Create Quiz'),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            foregroundColor: Colors.white,
+                            backgroundColor: const Color(0xFF4DB8A8),
+                          ),
                         ),
-                        foregroundColor: Colors.white,
-                        backgroundColor: const Color(0xFF4DB8A8),
                       ),
-                    ),
+                    ],
                   ),
 
                   const SizedBox(height: 18),
@@ -445,37 +568,16 @@ class _NotesScreenState extends State<NotesScreen>
 
     try {
       if (!mounted) return;
-      // Show loading dialog
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (ctx) => const Center(
-          child: Card(
-            child: Padding(
-              padding: EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('Generating quiz from content...'),
-                  SizedBox(height: 8),
-                  Text(
-                    'This may take a moment',
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-
+      
+      print('📝 Generating quiz from content (${content.length} chars)');
+      
       final jsonText = await GroqChatService.generateQuizFromDocument(content, numQuestions: 5);
+      print('✅ Received quiz JSON response');
+      
       final questions = _parseQuizJson(jsonText);
+      print('✅ Parsed ${questions.length} questions');
 
       if (!mounted) return;
-      Navigator.of(context).pop(); // Close loading dialog
       
       if (questions.isEmpty || (questions.length == 1 && questions[0].stem.contains('Failed to parse'))) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -494,26 +596,31 @@ class _NotesScreenState extends State<NotesScreen>
       );
     } catch (e) {
       if (!mounted) return;
-      Navigator.of(context).pop(); // Close loading dialog if open
+      
+      print('❌ Quiz generation error: $e');
       
       String errorMessage = 'Quiz generation failed';
       if (e.toString().contains('rate') || e.toString().contains('limit') || e.toString().contains('429')) {
         errorMessage = 'API rate limit reached. Please wait a few moments and try again.';
-      } else if (e.toString().contains('Unauthorized') || e.toString().contains('401')) {
+      } else if (e.toString().contains('Unauthorized') || e.toString().contains('401') || e.toString().contains('Invalid API key')) {
         errorMessage = 'API authentication failed. Please check your API key.';
       } else if (e.toString().contains('timeout') || e.toString().contains('Timeout')) {
-        errorMessage = 'Request timed out. Please try again.';
+        errorMessage = 'Request timed out. Please try again with shorter content.';
+      } else if (e.toString().contains('JSON')) {
+        errorMessage = 'Failed to process API response. Please try again.';
       } else {
-        final errMsg = e.toString().split(':').last.trim();
-        errorMessage = 'Quiz generation failed: ${errMsg.length > 100 ? "${errMsg.substring(0, 100)}..." : errMsg}';
+        final errMsg = e.toString().replaceAll('Exception: ', '').trim();
+        errorMessage = errMsg.length > 100 ? '${errMsg.substring(0, 100)}...' : errMsg;
       }
       
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(errorMessage),
           duration: const Duration(seconds: 5),
+          backgroundColor: Colors.red.shade700,
           action: SnackBarAction(
             label: 'OK',
+            textColor: Colors.white,
             onPressed: () {},
           ),
         ),
@@ -525,27 +632,35 @@ class _NotesScreenState extends State<NotesScreen>
 
   List<_GenQuestion> _parseQuizJson(String jsonText) {
     try {
-      final data = jsonDecode(jsonText) as List;
+      print('🔍 Parsing quiz JSON (length: ${jsonText.length})');
+      final data = jsonDecode(jsonText);
+      
+      if (data is! List) {
+        print('❌ JSON is not a list: ${data.runtimeType}');
+        throw Exception('Expected JSON array, got ${data.runtimeType}');
+      }
+      
+      if (data.isEmpty) {
+        print('❌ JSON array is empty');
+        throw Exception('No questions generated');
+      }
+      
+      print('✅ Parsing ${data.length} questions');
+      
       return data.map((q) {
+        if (q is! Map) {
+          throw Exception('Question is not an object');
+        }
         final stem = q['stem'] as String;
         final optionsData = q['options'] as List;
         final explanation = (q['explanation'] ?? '') as String;
         final options = optionsData.map((o) => _GenOption(text: o['text'] as String, correct: o['correct'] as bool)).toList();
         return _GenQuestion(stem: stem, options: options, explanation: explanation);
       }).toList();
-    } catch (_) {
-      return [
-        _GenQuestion(
-          stem: 'Failed to parse quiz JSON. Please try another PDF.',
-          options: [
-            _GenOption(text: 'OK', correct: true),
-            _GenOption(text: 'Cancel', correct: false),
-            _GenOption(text: 'Retry', correct: false),
-            _GenOption(text: 'Ignore', correct: false),
-          ],
-          explanation: 'JSON parsing error.',
-        )
-      ];
+    } catch (e) {
+      print('❌ Quiz JSON parsing error: $e');
+      print('📄 JSON content: ${jsonText.substring(0, jsonText.length > 1000 ? 1000 : jsonText.length)}');
+      throw Exception('Failed to parse quiz: $e');
     }
   }
 }

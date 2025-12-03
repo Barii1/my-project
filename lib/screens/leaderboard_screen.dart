@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
  
 class LeaderboardScreen extends StatelessWidget {
   const LeaderboardScreen({super.key});
@@ -21,68 +22,100 @@ class LeaderboardScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
-            child: Container(
-              color: Theme.of(context).cardColor,
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
-              child: Column(
-                children: [
-                  const SizedBox(height: 24),
-                  // Top 3 cards
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    crossAxisAlignment: CrossAxisAlignment.end,
+      body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+        stream: FirebaseFirestore.instance
+            .collection('leaderboards_global')
+            .doc('weekly')
+            .snapshots(),
+        builder: (context, snapshot) {
+          final theme = Theme.of(context);
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (!snapshot.hasData || !snapshot.data!.exists) {
+            return Center(
+              child: Text(
+                'No leaderboard data yet',
+                style: TextStyle(color: theme.textTheme.bodyMedium?.color),
+              ),
+            );
+          }
+
+          final data = snapshot.data!.data()!;
+          final List<dynamic> leaders = (data['leaders'] ?? []) as List<dynamic>;
+
+          // Map Firestore payload to UI entries
+          final entries = <LeaderboardEntry>[];
+          for (final l in leaders) {
+            if (l is Map<String, dynamic>) {
+              entries.add(
+                LeaderboardEntry(
+                  name: (l['username'] ?? 'Learner') as String,
+                  subject: (l['subject'] ?? 'All Subjects') as String,
+                  points: (l['xp'] ?? 0) as int,
+                  progress: (l['progress'] ?? '') as String,
+                  color: const Color(0xFF27AE60),
+                ),
+              );
+            }
+          }
+
+          return CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(
+                child: Container(
+                  color: theme.cardColor,
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+                  child: Column(
                     children: [
-                      _buildTopThreeCard(
-                        rank: 2,
-                        name: 'Sarah M.',
-                        points: '8,750',
-                        color: const Color(0xFF95A5A6),
-                      ),
-                      _buildTopThreeCard(
-                        rank: 1,
-                        name: 'Alex K.',
-                        points: '9,450',
-                        color: const Color(0xFFF1C40F),
-                        isTop: true,
-                      ),
-                      _buildTopThreeCard(
-                        rank: 3,
-                        name: 'Mike R.',
-                        points: '8,200',
-                        color: const Color(0xFFD35400),
+                      const SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          for (int i = 0; i < 3 && i < entries.length; i++)
+                            _buildTopThreeCard(
+                              rank: i + 1 == 1 ? 1 : (i + 1 == 2 ? 2 : 3),
+                              name: entries[i].name,
+                              points: '${entries[i].points}',
+                              color: i == 0
+                                  ? const Color(0xFFF1C40F)
+                                  : i == 1
+                                      ? const Color(0xFF95A5A6)
+                                      : const Color(0xFFD35400),
+                              isTop: i == 0,
+                            ),
+                        ],
                       ),
                     ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Top Learners', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 16),
-                ],
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: const Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Top Learners', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                      SizedBox(height: 16),
+                    ],
+                  ),
+                ),
               ),
-            ),
-          ),
-          SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                final rank = index + 4;
-                final learner = _leaderboardEntries[index];
-                return _buildLeaderboardTile(context, rank: rank, entry: learner);
-              },
-              childCount: _leaderboardEntries.length,
-            ),
-          ),
-        ],
+              SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    final rank = index + 4; // after top 3
+                    final learner = entries[index + 3];
+                    return _buildLeaderboardTile(context, rank: rank, entry: learner);
+                  },
+                  childCount: entries.length > 3 ? entries.length - 3 : 0,
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -191,40 +224,4 @@ class LeaderboardEntry {
   });
 }
 
-final _leaderboardEntries = [
-  LeaderboardEntry(
-    name: 'David L.',
-    subject: 'Computer Science',
-    points: 7800,
-    progress: '+12% this week',
-    color: Color(0xFF27AE60),
-  ),
-  LeaderboardEntry(
-    name: 'Emma S.',
-    subject: 'Mathematics',
-    points: 7500,
-    progress: '+8% this week',
-    color: Color(0xFF8E44AD),
-  ),
-  LeaderboardEntry(
-    name: 'James H.',
-    subject: 'Physics',
-    points: 7200,
-    progress: '+15% this week',
-    color: Color(0xFF2980B9),
-  ),
-  LeaderboardEntry(
-    name: 'Lisa M.',
-    subject: 'Computer Science',
-    points: 6900,
-    progress: '+5% this week',
-    color: Color(0xFFE67E22),
-  ),
-  LeaderboardEntry(
-    name: 'Chris P.',
-    subject: 'Mathematics',
-    points: 6600,
-    progress: '+10% this week',
-    color: Color(0xFF16A085),
-  ),
-];
+// Data now sourced from Firestore via StreamBuilder above.
