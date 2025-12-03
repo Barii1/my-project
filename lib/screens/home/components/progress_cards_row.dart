@@ -1,25 +1,29 @@
 import 'package:flutter/material.dart';
 
 class ProgressCardsRow extends StatelessWidget {
-  const ProgressCardsRow({super.key});
+  final double dailyProgress; // 0.0 - 1.0
+  const ProgressCardsRow({super.key, required this.dailyProgress});
 
   @override
   Widget build(BuildContext context) {
     return Row(
-      children: const [
-        Expanded(child: _DailyGoalCard()),
-        SizedBox(width: 16),
-        Expanded(child: _TotalXpCard()),
+      children: [
+        Expanded(child: _DailyGoalCard(progress: dailyProgress)),
+        const SizedBox(width: 16),
+        const Expanded(child: _TotalXpCard()),
       ],
     );
   }
 }
 
 class _DailyGoalCard extends StatelessWidget {
-  const _DailyGoalCard();
+  final double progress;
+  const _DailyGoalCard({required this.progress});
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final clamped = progress.clamp(0.0, 1.0);
+    final percentText = '${(clamped * 100).round()}%';
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -39,7 +43,7 @@ class _DailyGoalCard extends StatelessWidget {
               alignment: Alignment.center,
               children: [
                 CircularProgressIndicator(
-                  value: 0.65,
+                  value: clamped,
                   strokeWidth: 8,
                   backgroundColor: isDark ? const Color(0xFF2A2E45) : const Color(0xFFE5E7EB),
                   valueColor: const AlwaysStoppedAnimation(Color(0xFF3DA89A)),
@@ -54,7 +58,7 @@ class _DailyGoalCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          Text('65%', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF1F2937))),
+          Text(percentText, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF1F2937))),
           const SizedBox(height: 4),
           Text('Daily Goal', style: TextStyle(fontSize: 14, color: isDark ? Colors.white70 : const Color(0xFF6B7280))),
         ],

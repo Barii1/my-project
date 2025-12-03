@@ -99,12 +99,7 @@ class _StreakSummaryState extends State<StreakSummary> {
               ],
             ),
           ),
-          // Chevron icon
-          Icon(
-            Icons.chevron_right,
-            color: isDark ? Colors.white30 : const Color(0xFFD1D5DB),
-            size: 24,
-          ),
+          // No action arrow; display only
         ],
       ),
     );

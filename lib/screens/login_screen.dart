@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/auth_provider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/responsive_layout.dart';
@@ -18,12 +19,14 @@ class LoginScreen extends StatelessWidget {
         child: SingleChildScrollView(
           child: Padding(
             padding: AppTheme.scaledPadding(context, horizontal: 20, vertical: 20),
-            child: Card(
-              elevation: 12,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              child: Padding(
-                padding: AppTheme.scaledPadding(context, horizontal: 24, vertical: 24),
-                child: const LogIn(),
+            child: RepaintBoundary(
+              child: Card(
+                elevation: 4, // lower elevation to reduce blur/shadow cost
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                child: Padding(
+                  padding: AppTheme.scaledPadding(context, horizontal: 24, vertical: 24),
+                  child: const LogIn(),
+                ),
               ),
             ),
           ),
@@ -48,6 +51,12 @@ class _LogInState extends State<LogIn> {
   bool _isLoading = false;
 
   @override
+  void initState() {
+    super.initState();
+    _logFcmToken();
+  }
+
+  @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
@@ -70,10 +79,14 @@ class _LogInState extends State<LogIn> {
       setState(() => _isLoading = false);
 
       if (success) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const HomeScreenV3()),
-        );
+        // Defer navigation to next frame to avoid race with rebuilds
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const HomeScreenV3()),
+            (route) => false,
+          );
+        });
         return;
       }
 
@@ -84,6 +97,16 @@ class _LogInState extends State<LogIn> {
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Login error: $e')));
     }
+  }
+
+  Future<void> _logFcmToken() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('fcm_token');
+      if (token != null) {
+        debugPrint('FCM token: '+token);
+      }
+    } catch (_) {}
   }
 
   @override
@@ -146,6 +169,9 @@ class _LogInState extends State<LogIn> {
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
             ),
             keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.next,
+            autocorrect: false,
+            enableSuggestions: false,
             validator: (value) {
               if (value == null || value.isEmpty) return 'Please enter your email';
               if (!value.contains('@')) return 'Please enter a valid email';
@@ -170,6 +196,7 @@ class _LogInState extends State<LogIn> {
               ),
             ),
             obscureText: _obscurePassword,
+            textInputAction: TextInputAction.done,
             validator: (value) {
               if (value == null || value.isEmpty) return 'Please enter your password';
               if (value.length < 6) return 'Password must be at least 6 characters';

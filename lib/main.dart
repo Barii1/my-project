@@ -43,6 +43,8 @@ import 'services/chat_history_service.dart';
 import 'services/connectivity_service.dart';
 import 'lib/Email Verification/pin_screen.dart' as ev;
 import 'screens/debug_input_screen.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'services/notification_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -51,6 +53,10 @@ Future<void> main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // Register background handler and initialize notifications
+  FirebaseMessaging.onBackgroundMessage(NotificationService.backgroundHandler);
+  await NotificationService().initialize();
 
   // Configure local Firebase emulators if enabled
   await _configureFirebaseEmulators();

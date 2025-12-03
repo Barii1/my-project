@@ -27,15 +27,20 @@ class HomeScreenV3 extends StatefulWidget {
   State<HomeScreenV3> createState() => _HomeScreenV3State();
 }
 
-class _HomeScreenV3State extends State<HomeScreenV3> {
+class _HomeScreenV3State extends State<HomeScreenV3> with WidgetsBindingObserver {
   int _selectedIndex = 0;
   int _dailyQuizCount = 0;
   int _dailyGoal = 3; // Default value, loaded from prefs
+  int _streak = 0; // Dynamic login streak
+  DateTime? _sessionStart;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadDailyGoal();
+    _updateDailyStreak();
+    _beginSession();
   }
 
   Future<void> _loadDailyGoal() async {
@@ -61,6 +66,89 @@ class _HomeScreenV3State extends State<HomeScreenV3> {
         _dailyGoal = targetGoal;
       });
     }
+  }
+
+  @override
+  void dispose() {
+    _endSession();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _beginSession();
+    } else if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
+      _endSession();
+    }
+  }
+
+  Future<void> _beginSession() async {
+    _sessionStart = DateTime.now();
+  }
+
+  Future<void> _endSession() async {
+    if (_sessionStart == null) return;
+    final end = DateTime.now();
+    final seconds = end.difference(_sessionStart!).inSeconds;
+    _sessionStart = null;
+    if (seconds <= 0) return;
+    final prefs = await SharedPreferences.getInstance();
+    final today = DateTime.now();
+    final dateKey = '${today.year}-${today.month}-${today.day}';
+    final key = 'usage_$dateKey';
+    final current = prefs.getInt(key) ?? 0;
+    await prefs.setInt(key, current + seconds);
+  }
+
+  Future<void> _updateDailyStreak() async {
+    final prefs = await SharedPreferences.getInstance();
+    final today = DateTime.now();
+    final dateKey = '${today.year}-${today.month}-${today.day}';
+    final lastLogin = prefs.getString('last_login_date');
+    int streak = prefs.getInt('streak_count') ?? 0;
+
+    if (lastLogin == null) {
+      // First login
+      await prefs.setString('last_login_date', dateKey);
+      await prefs.setInt('streak_count', 1);
+      setState(() => _streak = 1);
+      return;
+    }
+
+    if (lastLogin == dateKey) {
+      // Already counted today
+      setState(() => _streak = streak);
+      return;
+    }
+
+    // Compute if last login was yesterday
+    final parts = lastLogin.split('-');
+    if (parts.length == 3) {
+      final y = int.tryParse(parts[0]);
+      final m = int.tryParse(parts[1]);
+      final d = int.tryParse(parts[2]);
+      if (y != null && m != null && d != null) {
+        final diff = today.difference(DateTime(y, m, d)).inDays;
+        if (diff == 1) {
+          // Consecutive day
+          streak += 1;
+        } else {
+          // Missed at least one day
+          streak = 1; // Start fresh at 1 for today
+        }
+      } else {
+        // Malformed stored date, reset
+        streak = 1;
+      }
+    } else {
+      streak = 1;
+    }
+
+    await prefs.setString('last_login_date', dateKey);
+    await prefs.setInt('streak_count', streak);
+    setState(() => _streak = streak);
   }
 
   void _onItemTapped(int index) {
@@ -162,9 +250,13 @@ class _HomeScreenV3State extends State<HomeScreenV3> {
         children: [
           _buildWelcomeRow(name),
           const SizedBox(height: 20),
-          const StreakSummary(streak: 12),
+          StreakSummary(streak: _streak),
           const SizedBox(height: 16),
-          const ProgressCardsRow(),
+          ProgressCardsRow(
+            dailyProgress: (_dailyGoal > 0)
+                ? (_dailyQuizCount / _dailyGoal).clamp(0.0, 1.0)
+                : 0.0,
+          ),
           const SizedBox(height: 20),
           const FriendsSection(),
           const SizedBox(height: 20),
@@ -336,155 +428,169 @@ class _HomeScreenV3State extends State<HomeScreenV3> {
 
   Widget _buildWeeklyProgressGraph() {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    // Sample data for the week - hours studied per day
-    final weekData = [2.5, 3.0, 1.5, 4.0, 3.5, 2.0, 3.8];
     final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    final maxHours = 5.0;
-    
-    // Get current day of week (1 = Monday, 7 = Sunday)
     final now = DateTime.now();
-    final currentDayIndex = now.weekday - 1; // Convert to 0-based index
-    
-    return InkWell(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => const AppUsageScreen(),
+    final currentDayIndex = now.weekday - 1;
+    const maxHours = 5.0;
+
+    return FutureBuilder<SharedPreferences>(
+      future: SharedPreferences.getInstance(),
+      builder: (context, snapshot) {
+        final prefs = snapshot.data;
+        final List<double> weekData = [];
+        double totalHours = 0.0;
+        if (prefs != null) {
+          for (int i = 0; i < 7; i++) {
+            final day = now.subtract(Duration(days: now.weekday - 1 - i));
+            final dateKey = '${day.year}-${day.month}-${day.day}';
+            final secs = prefs.getInt('usage_$dateKey') ?? 0;
+            final hrs = secs / 3600.0;
+            final rounded = double.parse(hrs.toStringAsFixed(2));
+            weekData.add(rounded);
+            totalHours += rounded;
+          }
+        } else {
+          weekData.addAll(List.filled(7, 0.0));
+        }
+
+        return InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const AppUsageScreen(),
+              ),
+            );
+          },
+          borderRadius: BorderRadius.circular(20),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF16213E) : Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: isDark ? Border.all(color: const Color(0xFF2A2E45)) : null,
+              boxShadow: const [
+                BoxShadow(color: Color(0x08000000), blurRadius: 8, offset: Offset(0, 2)),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF3DA89A).withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(
+                            Icons.analytics_outlined,
+                            color: Color(0xFF3DA89A),
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Text(
+                          'Study Analytics',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white : const Color(0xFF1F2937),
+                          ),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF10B981).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '${totalHours.toStringAsFixed(1)} hrs',
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF10B981),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Hours studied this week',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: isDark ? Colors.white70 : const Color(0xFF9CA3AF),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: List.generate(7, (index) {
+                    final value = weekData[index];
+                    final height = (value / maxHours) * 120;
+                    final isToday = index == currentDayIndex;
+                    return GestureDetector(
+                      onTap: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('${days[index]}: ${value.toStringAsFixed(2)} hours'),
+                            duration: const Duration(seconds: 1),
+                            behavior: SnackBarBehavior.floating,
+                          ),
+                        );
+                      },
+                      child: Column(
+                        children: [
+                          Text(
+                            value.toStringAsFixed(2),
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w600,
+                              color: isToday ? const Color(0xFF3DA89A) : const Color(0xFF9CA3AF),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            width: 32,
+                            height: height,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: isToday
+                                    ? [const Color(0xFF4DB8A8), const Color(0xFF3DA89A)]
+                                    : [const Color(0xFFE5E7EB), const Color(0xFFD1D5DB)],
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                              ),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            days[index],
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: isToday ? FontWeight.w600 : FontWeight.normal,
+                              color: isToday ? const Color(0xFF3DA89A) : const Color(0xFF6B7280),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                ),
+              ],
+            ),
           ),
         );
       },
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF16213E) : Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: isDark ? Border.all(color: const Color(0xFF2A2E45)) : null,
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0x08000000),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF3DA89A).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: const Icon(
-                        Icons.analytics_outlined,
-                        color: Color(0xFF3DA89A),
-                        size: 20,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Study Analytics',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : const Color(0xFF1F2937),
-                      ),
-                    ),
-                  ],
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF10B981).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                child: const Text(
-                  '20.3 hrs',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF10B981),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Hours studied this week',
-            style: TextStyle(
-              fontSize: 12,
-              color: isDark ? Colors.white70 : const Color(0xFF9CA3AF),
-            ),
-          ),
-          const SizedBox(height: 24),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: List.generate(7, (index) {
-              final height = (weekData[index] / maxHours) * 120;
-              final isToday = index == currentDayIndex; // Dynamic current day
-              
-              return GestureDetector(
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('${days[index]}: ${weekData[index]} hours'),
-                      duration: const Duration(seconds: 1),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
-                },
-                child: Column(
-                  children: [
-                    Text(
-                      weekData[index].toString(),
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                        color: isToday ? const Color(0xFF3DA89A) : const Color(0xFF9CA3AF),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      width: 32,
-                      height: height,
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: isToday 
-                            ? [const Color(0xFF4DB8A8), const Color(0xFF3DA89A)]
-                            : [const Color(0xFFE5E7EB), const Color(0xFFD1D5DB)],
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                        ),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      days[index],
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: isToday ? FontWeight.w600 : FontWeight.normal,
-                        color: isToday ? const Color(0xFF3DA89A) : const Color(0xFF6B7280),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }),
-          ),
-        ],
-      ),
-      ),
     );
   }
 

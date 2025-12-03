@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'ai_chat_screen.dart';
 
 class TopicQuizScreen extends StatefulWidget {
@@ -587,6 +588,8 @@ class _TopicQuizScreenState extends State<TopicQuizScreen> {
         actions: [
           TextButton(
             onPressed: () {
+              // Increment daily quiz count on completion
+              _incrementDailyQuizCount();
               Navigator.of(context).pop();
               Navigator.of(context).pop();
             },
@@ -611,6 +614,24 @@ class _TopicQuizScreenState extends State<TopicQuizScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _incrementDailyQuizCount() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final today = DateTime.now();
+      final dateKey = '${today.year}-${today.month}-${today.day}';
+      final savedDate = prefs.getString('daily_goal_date') ?? '';
+      if (savedDate != dateKey) {
+        await prefs.setString('daily_goal_date', dateKey);
+        await prefs.setInt('daily_quiz_count', 1);
+      } else {
+        final current = prefs.getInt('daily_quiz_count') ?? 0;
+        await prefs.setInt('daily_quiz_count', current + 1);
+      }
+    } catch (_) {
+      // ignore storage errors
+    }
   }
 
   @override
