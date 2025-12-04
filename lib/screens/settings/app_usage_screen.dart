@@ -10,13 +10,34 @@ class AppUsageScreen extends StatefulWidget {
   State<AppUsageScreen> createState() => _AppUsageScreenState();
 }
 
-class _AppUsageScreenState extends State<AppUsageScreen> {
+class _AppUsageScreenState extends State<AppUsageScreen> with WidgetsBindingObserver {
   String _selectedPeriod = 'Today';
   int _totalMinutes = 0;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _loadUsageData();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _loadUsageData(); // Refresh when app resumes
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Refresh data when screen becomes visible
     _loadUsageData();
   }
 
@@ -25,16 +46,26 @@ class _AppUsageScreenState extends State<AppUsageScreen> {
   Future<void> _loadUsageData() async {
     final prefs = await SharedPreferences.getInstance();
     final key = 'usage_${_selectedPeriod.toLowerCase().replaceAll(' ', '_')}';
-    setState(() {
-      _totalMinutes = prefs.getInt(key) ?? 0;
-    });
+    final seconds = prefs.getInt(key) ?? 0;
+    
+    // Debug: Print the values to verify
+    print('Loading usage for key: $key');
+    print('Seconds found: $seconds');
+    print('Minutes calculated: ${(seconds / 60).round()}');
+    
+    if (mounted) {
+      setState(() {
+        _totalMinutes = (seconds / 60).round();
+      });
+    }
   }
   
   String _formatTime(int minutes) {
-    if (minutes < 60) return '${minutes}m';
+    if (minutes < 60) return '${minutes}min';
     final hours = minutes ~/ 60;
     final mins = minutes % 60;
-    return '${hours}h ${mins}m';
+    if (mins == 0) return '${hours}h';
+    return '${hours}h ${mins}min';
   }
 
   @override
@@ -44,10 +75,17 @@ class _AppUsageScreenState extends State<AppUsageScreen> {
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF1A1A2E) : const Color(0xFFFEF7FA),
       appBar: AppBar(
-        title: const Text('App Usage'),
+        title: const Text('Screen Time'),
         backgroundColor: isDark ? const Color(0xFF16213E) : Colors.white,
         foregroundColor: isDark ? Colors.white : const Color(0xFF34495E),
         elevation: 1,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadUsageData,
+            tooltip: 'Refresh',
+          ),
+        ],
       ),
       body: Center(
         child: Padding(
@@ -62,7 +100,7 @@ class _AppUsageScreenState extends State<AppUsageScreen> {
               ),
               const SizedBox(height: 24),
               Text(
-                _formatTime(_totalMinutes),
+                _totalMinutes > 0 ? _formatTime(_totalMinutes) : '0min',
                 style: TextStyle(
                   fontSize: 48,
                   fontWeight: FontWeight.bold,
@@ -75,6 +113,15 @@ class _AppUsageScreenState extends State<AppUsageScreen> {
                 style: TextStyle(
                   fontSize: 18,
                   color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                _totalMinutes == 0 ? 'Usage tracking started - use the app to see time' : 'Updates every minute while using the app',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: isDark ? Colors.white54 : const Color(0xFF94A3B8),
                 ),
               ),
               const SizedBox(height: 40),

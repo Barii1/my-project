@@ -182,10 +182,11 @@ class AuthProvider with ChangeNotifier {
         _fullName = refreshed?.displayName ?? fullName;
         _lastError = null;
 
-        // Save user data to Firestore
+        // Save user data to Firestore with searchable name
         final userData = {
           'email': email,
           'fullName': fullName,
+          'searchName': fullName.toLowerCase(), // For case-insensitive search
           'displayName': fullName,
           'provider': 'password',
           'isVerified': false,

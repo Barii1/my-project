@@ -92,50 +92,23 @@ class CommunityUserProfileScreen extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: _buildStatCard('42', 'Posts', isDark),
+                  child: _buildStatCard('8.5k', 'XP', isDark),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: _buildStatCard('128', 'Likes', isDark),
+                  child: _buildStatCard('28', 'Streak', isDark),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: _buildStatCard('3', 'Groups', isDark),
+                  child: _buildStatCard('45', 'Quizzes', isDark),
                 ),
               ],
             ),
 
             const SizedBox(height: 32),
 
-            // Tabs
-            DefaultTabController(
-              length: 3,
-              child: Column(
-                children: [
-                  TabBar(
-                    labelColor: isDark ? const Color(0xFF4DB8A8) : const Color(0xFF3DA89A),
-                    unselectedLabelColor: isDark ? Colors.white54 : const Color(0xFF94A3B8),
-                    indicatorColor: const Color(0xFF4DB8A8),
-                    tabs: const [
-                      Tab(text: 'Posts'),
-                      Tab(text: 'Questions'),
-                      Tab(text: 'Groups'),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    height: 400,
-                    child: TabBarView(
-                      children: [
-                        _buildPostsList(isDark),
-                        _buildQuestionsList(isDark),
-                        _buildGroupsList(isDark),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            // Recent Activity
+            _buildRecentActivity(isDark),
           ],
         ),
       ),
@@ -175,158 +148,53 @@ class CommunityUserProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildPostsList(bool isDark) {
-    return ListView(
+  Widget _buildRecentActivity(bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildPostItem(
-          'Just completed the Algorithms course! 🎉',
+        Text(
+          'Recent Activity',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: isDark ? Colors.white : const Color(0xFF34495E),
+          ),
+        ),
+        const SizedBox(height: 16),
+        _buildActivityItem(
+          Icons.quiz,
+          'Completed Data Structures Quiz',
           '2 days ago',
-          '24 likes',
+          const Color(0xFF4DB8A8),
           isDark,
         ),
         const SizedBox(height: 12),
-        _buildPostItem(
-          'Sharing my notes on Dynamic Programming',
+        _buildActivityItem(
+          Icons.local_fire_department,
+          'Achieved 28-day streak',
+          '3 days ago',
+          const Color(0xFFF59E0B),
+          isDark,
+        ),
+        const SizedBox(height: 12),
+        _buildActivityItem(
+          Icons.note_alt,
+          'Created new study notes',
           '1 week ago',
-          '56 likes',
+          const Color(0xFF8B5CF6),
           isDark,
         ),
       ],
     );
   }
 
-  Widget _buildQuestionsList(bool isDark) {
-    return ListView(
-      children: [
-        _buildQuestionItem(
-          'How to optimize recursive solutions?',
-          '3 answers',
-          isDark,
-        ),
-        const SizedBox(height: 12),
-        _buildQuestionItem(
-          'Best resources for learning Data Structures?',
-          '7 answers',
-          isDark,
-        ),
-      ],
-    );
-  }
-
-  Widget _buildGroupsList(bool isDark) {
-    return ListView(
-      children: [
-        _buildGroupItem('Physics Study Circle', '24 members', isDark),
-        const SizedBox(height: 12),
-        _buildGroupItem('Calculus Masters', '18 members', isDark),
-        const SizedBox(height: 12),
-        _buildGroupItem('Chemistry Lab Partners', '32 members', isDark),
-      ],
-    );
-  }
-
-  Widget _buildPostItem(String content, String time, String likes, bool isDark) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF16213E) : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDark ? const Color(0xFF2A2E45) : const Color(0xFFE5E7EB),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            content,
-            style: TextStyle(
-              fontSize: 15,
-              color: isDark ? Colors.white : const Color(0xFF34495E),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Icon(
-                Icons.access_time,
-                size: 14,
-                color: isDark ? Colors.white54 : const Color(0xFF94A3B8),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                time,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: isDark ? Colors.white54 : const Color(0xFF94A3B8),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Icon(
-                Icons.favorite_outline,
-                size: 14,
-                color: isDark ? Colors.white54 : const Color(0xFF94A3B8),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                likes,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: isDark ? Colors.white54 : const Color(0xFF94A3B8),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuestionItem(String question, String answers, bool isDark) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF16213E) : Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDark ? const Color(0xFF2A2E45) : const Color(0xFFE5E7EB),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            question,
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              color: isDark ? Colors.white : const Color(0xFF34495E),
-            ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Icon(
-                Icons.check_circle_outline,
-                size: 14,
-                color: isDark ? Colors.white54 : const Color(0xFF94A3B8),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                answers,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: isDark ? Colors.white54 : const Color(0xFF94A3B8),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildGroupItem(String name, String members, bool isDark) {
+  Widget _buildActivityItem(
+    IconData icon,
+    String title,
+    String time,
+    Color color,
+    bool isDark,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -338,21 +206,30 @@ class CommunityUserProfileScreen extends StatelessWidget {
       ),
       child: Row(
         children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  name,
+                  title,
                   style: TextStyle(
-                    fontSize: 15,
+                    fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: isDark ? Colors.white : const Color(0xFF34495E),
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  members,
+                  time,
                   style: TextStyle(
                     fontSize: 12,
                     color: isDark ? Colors.white54 : const Color(0xFF94A3B8),
@@ -360,11 +237,6 @@ class CommunityUserProfileScreen extends StatelessWidget {
                 ),
               ],
             ),
-          ),
-          Icon(
-            Icons.arrow_forward_ios,
-            size: 16,
-            color: isDark ? Colors.white54 : const Color(0xFF94A3B8),
           ),
         ],
       ),
