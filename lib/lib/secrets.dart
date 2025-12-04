@@ -1,5 +1,6 @@
 /// Temporary secrets placeholders to unblock builds.
 /// Replace with your actual values or secure retrieval.
+library;
 
 // AI/Chatbot deprecated HuggingFace key removed; Groq key now provided via --dart-define=GROQ_API_KEY
 

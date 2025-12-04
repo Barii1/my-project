@@ -121,7 +121,7 @@ class _DailyGoalScreenState extends State<DailyGoalScreen> {
                 isDark: isDark,
               ),
             );
-          }).toList(),
+          }),
 
           const SizedBox(height: 16),
 

@@ -7,7 +7,7 @@ import '../widgets/responsive_layout.dart';
 import '../services/email_pin_service.dart';
 import 'login_screen.dart';
 import 'home_screen_v3.dart';
-import '../lib/Email Verification/pin_verify_screen.dart';
+import 'package:flutter_figma/lib/Email%20Verification/pin_verify_screen.dart';
 
 class CreateAccountScreen extends StatelessWidget {
   const CreateAccountScreen({super.key});

@@ -144,7 +144,7 @@ class _AIChatScreenState extends State<AIChatScreen> with TickerProviderStateMix
     if (extracted.isEmpty) return 'No text extracted from PDF';
     // If still too long, truncate to ~15000 chars (Groq will chunk further if needed)
     if (extracted.length > 15000) {
-      return extracted.substring(0, 15000) + '\n\n[Note: PDF truncated to first 15,000 characters due to size]';
+      return '${extracted.substring(0, 15000)}\n\n[Note: PDF truncated to first 15,000 characters due to size]';
     }
     return extracted;
   }

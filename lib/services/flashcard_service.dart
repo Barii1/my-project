@@ -13,7 +13,9 @@ class FlashcardService {
     int interval = card.intervalDays;
 
     // Bounds check rating.
-    if (rating < 0) rating = 0; else if (rating > 5) rating = 5;
+    if (rating < 0) {
+      rating = 0;
+    } else if (rating > 5) rating = 5;
 
     if (rating < 3) {
       reps = 0;
