@@ -14,8 +14,13 @@ android {
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
+<<<<<<< HEAD
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+=======
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+>>>>>>> 81803cd47aa8dd779bd139c5467c1966a0338182
         isCoreLibraryDesugaringEnabled = true
     }
 
@@ -45,6 +50,10 @@ android {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 }
 
 // Plugin already applied via the plugins block for Kotlin DSL; no Groovy 'apply plugin' needed.

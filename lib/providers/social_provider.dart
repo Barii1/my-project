@@ -70,19 +70,10 @@ class SocialProvider extends ChangeNotifier {
     }
   }
 
-  // Friends state
-  final List<String> _friends = ['Alex Morgan', 'Emily Chen'];
-  final List<String> _friendRequests = ['Jordan Lee'];
-  final List<String> _allUsers = [
-    'Alex Morgan',
-    'Jordan Lee',
-    'Emily Chen',
-    'Sarah K.',
-    'Mike T.',
-    'Emma L.',
-    'David L.',
-    'Olivia K.',
-  ];
+  // Friends state - now managed via Firestore (no hardcoded data)
+  final List<String> _friends = [];
+  final List<String> _friendRequests = [];
+  final List<String> _allUsers = [];
 
   int likeCount(String postId) => _likeCounts[postId] ?? 0;
   bool isLiked(String postId) => _likedPosts.contains(postId);

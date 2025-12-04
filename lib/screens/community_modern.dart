@@ -231,48 +231,40 @@ class _CommunityModernScreenState extends State<CommunityModernScreen> with Sing
         // Top 3 Podium
         SliverToBoxAdapter(
           child: Container(
-            padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
-            child: Column(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                // Wrap in FittedBox to avoid bottom overflow on small screens
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    // 2nd Place
-                    _buildPodiumCard(
-                      rank: 2,
-                      name: globalUsers[1]['name'] as String,
-                      points: globalUsers[1]['points'] as String,
-                      color: const Color(0xFF94A3B8),
-                      height: 100,
-                      isDark: isDark,
-                    ),
-                    const SizedBox(width: 12),
-                    // 1st Place
-                    _buildPodiumCard(
-                      rank: 1,
-                      name: globalUsers[0]['name'] as String,
-                      points: globalUsers[0]['points'] as String,
-                      color: const Color(0xFFFFD700),
-                      height: 130,
-                      isDark: isDark,
-                      isFirst: true,
-                    ),
-                    const SizedBox(width: 12),
-                    // 3rd Place
-                    _buildPodiumCard(
-                      rank: 3,
-                      name: globalUsers[2]['name'] as String,
-                      points: globalUsers[2]['points'] as String,
-                      color: const Color(0xFFCD7F32),
-                      height: 80,
-                      isDark: isDark,
-                    ),
-                  ],
+                // 2nd Place
+                _buildPodiumCard(
+                  rank: 2,
+                  name: globalUsers[1]['name'] as String,
+                  points: globalUsers[1]['points'] as String,
+                  color: const Color(0xFF94A3B8),
+                  height: 120,
+                  isDark: isDark,
                 ),
+                const SizedBox(width: 16),
+                // 1st Place
+                _buildPodiumCard(
+                  rank: 1,
+                  name: globalUsers[0]['name'] as String,
+                  points: globalUsers[0]['points'] as String,
+                  color: const Color(0xFFFFD700),
+                  height: 150,
+                  isDark: isDark,
+                  isFirst: true,
+                ),
+                const SizedBox(width: 16),
+                // 3rd Place
+                _buildPodiumCard(
+                  rank: 3,
+                  name: globalUsers[2]['name'] as String,
+                  points: globalUsers[2]['points'] as String,
+                  color: const Color(0xFFCD7F32),
+                  height: 100,
+                  isDark: isDark,
                 ),
               ],
             ),
@@ -402,8 +394,8 @@ class _CommunityModernScreenState extends State<CommunityModernScreen> with Sing
           const SizedBox(height: 8),
         ],
         Container(
-          width: isFirst ? 80 : 70,
-          height: isFirst ? 80 : 70,
+          width: isFirst ? 100 : 85,
+          height: isFirst ? 100 : 85,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             gradient: LinearGradient(
@@ -428,7 +420,7 @@ class _CommunityModernScreenState extends State<CommunityModernScreen> with Sing
             child: Text(
               name.substring(0, 1),
               style: TextStyle(
-                fontSize: isFirst ? 32 : 28,
+                fontSize: isFirst ? 40 : 34,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
                 shadows: [

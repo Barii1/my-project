@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import '../providers/auth_provider.dart';
 import 'ai_tutor_screen.dart';
 import 'ai_chat_screen.dart';
@@ -33,6 +34,7 @@ class _HomeScreenV3State extends State<HomeScreenV3> with WidgetsBindingObserver
   int _dailyGoal = 3; // Default value, loaded from prefs
   int _streak = 0; // Dynamic login streak
   DateTime? _sessionStart;
+  Timer? _usageTimer;
 
   @override
   void initState() {
@@ -41,6 +43,7 @@ class _HomeScreenV3State extends State<HomeScreenV3> with WidgetsBindingObserver
     _loadDailyGoal();
     _updateDailyStreak();
     _beginSession();
+    _startUsageTracking();
   }
 
   Future<void> _loadDailyGoal() async {
@@ -71,6 +74,7 @@ class _HomeScreenV3State extends State<HomeScreenV3> with WidgetsBindingObserver
   @override
   void dispose() {
     _endSession();
+    _usageTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -79,9 +83,42 @@ class _HomeScreenV3State extends State<HomeScreenV3> with WidgetsBindingObserver
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _beginSession();
+      _startUsageTracking();
+      _loadDailyGoal(); // Refresh quiz counter when app resumes
+      setState(() {}); // Rebuild to update study analytics
     } else if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
       _endSession();
+      _usageTimer?.cancel();
     }
+  }
+
+  void _startUsageTracking() {
+    _usageTimer?.cancel();
+    _usageTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
+      _saveUsageIncrement();
+    });
+  }
+
+  Future<void> _saveUsageIncrement() async {
+    final prefs = await SharedPreferences.getInstance();
+    final today = DateTime.now();
+    final dateKey = '${today.year}-${today.month}-${today.day}';
+    
+    // Save for today
+    final todayKey = 'usage_$dateKey';
+    final todayCurrent = prefs.getInt(todayKey) ?? 0;
+    await prefs.setInt(todayKey, todayCurrent + 60); // Add 60 seconds (1 minute)
+    
+    // Also update aggregated keys for app usage screen
+    final todaySeconds = prefs.getInt('usage_today') ?? 0;
+    await prefs.setInt('usage_today', todaySeconds + 60);
+    
+    // Update week and month aggregates
+    final weekSeconds = prefs.getInt('usage_this_week') ?? 0;
+    await prefs.setInt('usage_this_week', weekSeconds + 60);
+    
+    final monthSeconds = prefs.getInt('usage_this_month') ?? 0;
+    await prefs.setInt('usage_this_month', monthSeconds + 60);
   }
 
   Future<void> _beginSession() async {
@@ -100,6 +137,16 @@ class _HomeScreenV3State extends State<HomeScreenV3> with WidgetsBindingObserver
     final key = 'usage_$dateKey';
     final current = prefs.getInt(key) ?? 0;
     await prefs.setInt(key, current + seconds);
+    
+    // Also update aggregated keys for app usage screen
+    final todaySeconds = prefs.getInt('usage_today') ?? 0;
+    await prefs.setInt('usage_today', todaySeconds + seconds);
+    
+    final weekSeconds = prefs.getInt('usage_this_week') ?? 0;
+    await prefs.setInt('usage_this_week', weekSeconds + seconds);
+    
+    final monthSeconds = prefs.getInt('usage_this_month') ?? 0;
+    await prefs.setInt('usage_this_month', monthSeconds + seconds);
   }
 
   Future<void> _updateDailyStreak() async {
@@ -155,6 +202,10 @@ class _HomeScreenV3State extends State<HomeScreenV3> with WidgetsBindingObserver
     setState(() {
       _selectedIndex = index;
     });
+    // Refresh data when returning to home tab
+    if (index == 0) {
+      _loadDailyGoal();
+    }
   }
 
   @override
@@ -495,7 +546,7 @@ class _HomeScreenV3State extends State<HomeScreenV3> with WidgetsBindingObserver
                         ),
                         const SizedBox(width: 12),
                         Text(
-                          'Study Analytics',
+                          'Data Analytics',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
