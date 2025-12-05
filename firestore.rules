@@ -19,6 +19,23 @@ service cloud.firestore {
       allow create, update, delete: if isOwner(userId) || isAdmin();
     }
 
+      // Daily screen time totals per user (synced from device)
+      match /users/{userId}/usage/{dayId} {
+        // Owners can read their own usage docs
+        allow read: if isOwner(userId);
+
+        // Owners can create/update their own daily usage with basic validation
+        allow create, update: if isOwner(userId)
+          && request.resource.data.keys().hasOnly(['seconds', 'updatedAt'])
+          && request.resource.data.seconds is int
+          && request.resource.data.seconds >= 0
+          && request.resource.data.seconds <= 86400 // 24h cap in seconds
+          && request.resource.data.updatedAt is timestamp;
+
+        // Allow deletes by owner or admin (e.g., reset week)
+        allow delete: if isOwner(userId) || isAdmin();
+      }
+
     // User images subcollection
     match /users/{userId}/images/{imageId} {
       allow read: if isSignedIn();

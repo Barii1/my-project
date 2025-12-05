@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart' show FirebaseAuth;
 import 'package:provider/provider.dart';
 import '../providers/stats_provider.dart';
 import '../services/quiz_attempt_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../services/xp_service.dart';
 
 class DailyQuizScreen extends StatefulWidget {
   const DailyQuizScreen({super.key});
@@ -95,8 +97,8 @@ class _DailyQuizScreenState extends State<DailyQuizScreen> {
           stats.completeQuiz(subject, scores[0], scores[1]);
         });
         
-        final percentage = (_score / _questions.length * 100).toInt();
-        final xpEarned = (_score / _questions.length * 100).toInt();
+        final percentage = (_score / _questions.length * 100);
+        final xpEarned = percentage.toInt();
         
         // Persist quiz attempt to backend (awards XP server-side)
         try {
@@ -108,15 +110,26 @@ class _DailyQuizScreenState extends State<DailyQuizScreen> {
             total: _questions.length,
             xpEarned: xpEarned,
           );
-        } catch (_) {
-          // Best-effort: ignore failures in UI flow
+        } catch (_) {}
+
+        // Award XP locally (Firestore) so Total XP updates immediately
+        try {
+          await XpService().awardXpForQuizCompletion(
+            questionCount: _questions.length,
+            scorePercent: percentage,
+            noSkippedQuestions: true,
+            subjectId: 'WeeklyQuiz',
+          );
+        } catch (e) {
+          debugPrint('XP quiz award failed: $e');
         }
         
         // Increment daily goal counter
         try {
           final prefs = await SharedPreferences.getInstance();
-          final currentCount = prefs.getInt('daily_quiz_count') ?? 0;
-          await prefs.setInt('daily_quiz_count', currentCount + 1);
+          final uid = FirebaseAuth.instance.currentUser?.uid ?? 'anon';
+          final currentCount = prefs.getInt('daily_quiz_count_$uid') ?? 0;
+          await prefs.setInt('daily_quiz_count_$uid', currentCount + 1);
         } catch (_) {
           // Best-effort: ignore failures
         }
@@ -142,7 +155,7 @@ class _DailyQuizScreenState extends State<DailyQuizScreen> {
                     style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
-                  Text('$percentage% accuracy'),
+                  Text('${percentage.toInt()}% accuracy'),
                   const SizedBox(height: 16),
                   Container(
                     padding: const EdgeInsets.all(12),

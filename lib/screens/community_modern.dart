@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
-import '../providers/stats_provider.dart';
+import '../services/friend_service.dart';
 import 'dart:async';
 
 class CommunityModernScreen extends StatefulWidget {
@@ -14,33 +14,17 @@ class CommunityModernScreen extends StatefulWidget {
 class _CommunityModernScreenState extends State<CommunityModernScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
   Timer? _updateTimer;
-  final List<Map<String, dynamic>> _globalUsers = [];
+  final _searchController = TextEditingController();
   // Demo-only randomizer removed in non-demo mode
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _initializeLeaderboard();
     _startPeriodicUpdates();
   }
   
-  void _initializeLeaderboard() {
-    _globalUsers.addAll([
-      {'name': 'Ayesha Khan', 'points': 12450, 'streak': 45},
-      {'name': 'Ahmed Ali', 'points': 11890, 'streak': 32},
-      {'name': 'Fatima Malik', 'points': 10320, 'streak': 28},
-      {'name': 'Hassan Raza', 'points': 9850, 'streak': 25},
-      {'name': 'Zainab Ahmed', 'points': 9210, 'streak': 22},
-      {'name': 'Usman Sheikh', 'points': 8790, 'streak': 19},
-      {'name': 'Maryam Siddiqui', 'points': 8340, 'streak': 17},
-      {'name': 'Bilal Hussain', 'points': 7920, 'streak': 15},
-      {'name': 'Sana Iqbal', 'points': 7560, 'streak': 12},
-      {'name': 'Hamza Farooq', 'points': 7180, 'streak': 10},
-      {'name': 'Hira Abbas', 'points': 6850, 'streak': 8},
-      {'name': 'Talha Imran', 'points': 6520, 'streak': 7},
-    ]);
-  }
+  void _initializeLeaderboard() {}
   
   void _startPeriodicUpdates() {
     // Demo-only updates removed. In non-demo mode, do nothing here.
@@ -51,6 +35,7 @@ class _CommunityModernScreenState extends State<CommunityModernScreen> with Sing
   void dispose() {
     _tabController.dispose();
     _updateTimer?.cancel();
+    _searchController.dispose();
     super.dispose();
   }
 
@@ -58,37 +43,7 @@ class _CommunityModernScreenState extends State<CommunityModernScreen> with Sing
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final auth = Provider.of<AuthProvider>(context);
-    final stats = Provider.of<StatsProvider>(context);
-    final currentUserName = auth.fullName ?? 'You';
-    
-    // Add current user to leaderboard dynamically
-    final userPoints = stats.totalXp;
-    final userStreak = stats.streakDays;
-    
-    // Create combined list with current user
-    final allUsers = List<Map<String, dynamic>>.from(_globalUsers);
-    final existingUserIndex = allUsers.indexWhere((u) => u['name'] == currentUserName);
-    if (existingUserIndex >= 0) {
-      allUsers[existingUserIndex] = {
-        'name': currentUserName,
-        'points': userPoints,
-        'streak': userStreak,
-      };
-    } else {
-      allUsers.add({
-        'name': currentUserName,
-        'points': userPoints,
-        'streak': userStreak,
-      });
-    }
-    allUsers.sort((a, b) => b['points'].compareTo(a['points']));
-    final globalUsers = allUsers.map((u) => {
-      'name': u['name'],
-      'points': _formatPoints(u['points']),
-      'streak': u['streak'],
-    }).toList();
-
-    final currentUserName2 = currentUserName;
+    final currentUserName = auth.fullName ?? (auth.email ?? 'You');
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF1A1A2E) : const Color(0xFFFEF7FA),
@@ -206,8 +161,8 @@ class _CommunityModernScreenState extends State<CommunityModernScreen> with Sing
               child: TabBarView(
                 controller: _tabController,
                 children: [
-                  _buildGlobalLeaderboard(isDark, currentUserName2, globalUsers),
-                  _buildFriendsLeaderboard(isDark, currentUserName, stats),
+                  _buildGlobalLeaderboard(isDark, currentUserName),
+                  _buildFriendsLeaderboard(isDark, currentUserName),
                 ],
               ),
             ),
@@ -224,72 +179,85 @@ class _CommunityModernScreenState extends State<CommunityModernScreen> with Sing
     return points.toString();
   }
   
-  Widget _buildGlobalLeaderboard(bool isDark, String currentUserName, List<Map<String, dynamic>> globalUsers) {
-    
+  Widget _buildGlobalLeaderboard(bool isDark, String currentUserName) {
+    final service = FriendService();
     return CustomScrollView(
       slivers: [
-        // Top 3 Podium
         SliverToBoxAdapter(
-          child: Container(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                // 2nd Place
-                _buildPodiumCard(
-                  rank: 2,
-                  name: globalUsers[1]['name'] as String,
-                  points: globalUsers[1]['points'] as String,
-                  color: const Color(0xFF94A3B8),
-                  height: 120,
-                  isDark: isDark,
+          child: FutureBuilder<List<LeaderboardEntry>>(
+            future: service.getGlobalLeaderboard(limit: 15),
+            builder: (context, snapshot) {
+              final entries = snapshot.data ?? [];
+              if (entries.length < 3) {
+                return const SizedBox.shrink();
+              }
+              final top3 = entries.take(3).toList();
+              return Container(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    _buildPodiumCard(
+                      rank: 2,
+                      name: top3[1].displayName,
+                      points: _formatPoints(top3[1].xp),
+                      color: const Color(0xFF94A3B8),
+                      height: 120,
+                      isDark: isDark,
+                    ),
+                    const SizedBox(width: 16),
+                    _buildPodiumCard(
+                      rank: 1,
+                      name: top3[0].displayName,
+                      points: _formatPoints(top3[0].xp),
+                      color: const Color(0xFFFFD700),
+                      height: 150,
+                      isDark: isDark,
+                      isFirst: true,
+                    ),
+                    const SizedBox(width: 16),
+                    _buildPodiumCard(
+                      rank: 3,
+                      name: top3[2].displayName,
+                      points: _formatPoints(top3[2].xp),
+                      color: const Color(0xFFCD7F32),
+                      height: 100,
+                      isDark: isDark,
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 16),
-                // 1st Place
-                _buildPodiumCard(
-                  rank: 1,
-                  name: globalUsers[0]['name'] as String,
-                  points: globalUsers[0]['points'] as String,
-                  color: const Color(0xFFFFD700),
-                  height: 150,
-                  isDark: isDark,
-                  isFirst: true,
-                ),
-                const SizedBox(width: 16),
-                // 3rd Place
-                _buildPodiumCard(
-                  rank: 3,
-                  name: globalUsers[2]['name'] as String,
-                  points: globalUsers[2]['points'] as String,
-                  color: const Color(0xFFCD7F32),
-                  height: 100,
-                  isDark: isDark,
-                ),
-              ],
-            ),
+              );
+            },
           ),
         ),
+        // Top 3 Podium
         // Rest of the list
         SliverPadding(
           padding: const EdgeInsets.fromLTRB(24, 0, 24, 120),
           sliver: SliverList(
             delegate: SliverChildBuilderDelegate(
               (context, index) {
-                final user = globalUsers[index + 3];
-                final rank = index + 4;
-                final isCurrentUser = user['name'] == currentUserName;
-                
-                return _buildLeaderboardTile(
-                  rank: rank,
-                  name: user['name'] as String,
-                  points: user['points'] as String,
-                  streak: user['streak'] as int,
-                  isDark: isDark,
-                  isCurrentUser: isCurrentUser,
+                return FutureBuilder<List<LeaderboardEntry>>(
+                  future: service.getGlobalLeaderboard(limit: 15),
+                  builder: (context, snapshot) {
+                    final entries = snapshot.data ?? [];
+                    if (entries.length <= 3) return const SizedBox.shrink();
+                    final entry = entries[index + 3];
+                    final rank = index + 4;
+                    final isCurrentUser = entry.displayName == currentUserName;
+                    return _buildLeaderboardTile(
+                      rank: rank,
+                      name: entry.displayName,
+                      points: _formatPoints(entry.xp),
+                      streak: entry.streakDays,
+                      isDark: isDark,
+                      isCurrentUser: isCurrentUser,
+                    );
+                  },
                 );
               },
-              childCount: globalUsers.length - 3,
+              childCount: 12,
             ),
           ),
         ),
@@ -297,74 +265,298 @@ class _CommunityModernScreenState extends State<CommunityModernScreen> with Sing
     );
   }
 
-  Widget _buildFriendsLeaderboard(bool isDark, String currentUserName, StatsProvider stats) {
-    // Create friends list with numeric points for proper sorting
-    final friendsUsersRaw = [
-      {'name': currentUserName, 'points': stats.totalXp, 'streak': stats.streakDays},
-      {'name': 'Ahmed Ali', 'points': 11890, 'streak': 32},
-      {'name': 'Fatima Malik', 'points': 10320, 'streak': 28},
-      {'name': 'Hassan Raza', 'points': 9850, 'streak': 25},
-      {'name': 'Zainab Ahmed', 'points': 9210, 'streak': 22},
-    ];
+  Widget _buildFriendsLeaderboard(bool isDark, String currentUserName) {
+    final service = FriendService();
     
-    // Sort by points (highest first)
-    friendsUsersRaw.sort((a, b) => (b['points'] as int).compareTo(a['points'] as int));
-    
-    // Format points for display
-    final friendsUsers = friendsUsersRaw.map((u) => {
-      'name': u['name'],
-      'points': _formatPoints(u['points'] as int),
-      'streak': u['streak'],
-    }).toList();
-    
-    if (friendsUsers.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.people_outline,
-              size: 80,
-              color: isDark ? Colors.white24 : Colors.black26,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'No friends yet',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
-                color: isDark ? Colors.white70 : const Color(0xFF64748B),
+    // Search + Add friend UI
+    final searchBar = Padding(
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _searchController,
+              decoration: const InputDecoration(
+                hintText: 'Search by username...',
+                prefixIcon: Icon(Icons.search),
+                border: OutlineInputBorder(),
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'Add friends to see their progress',
-              style: TextStyle(
-                fontSize: 15,
-                color: isDark ? Colors.white54 : const Color(0xFF94A3B8),
+          ),
+          const SizedBox(width: 8),
+          ElevatedButton(
+            onPressed: () async {
+              final q = _searchController.text.trim();
+              if (q.isEmpty) return;
+              final results = await service.searchUsersByUsernamePrefix(q);
+              if (!mounted) return;
+              showModalBottomSheet(
+                context: context,
+                builder: (_) {
+                  return ListView(
+                    children: results.map((r) {
+                      return FutureBuilder<bool>(
+                        future: service.isFriend(r.userId),
+                        builder: (context, snapFriend) {
+                          return FutureBuilder<String?>(
+                            future: service.getRequestStatus(r.userId),
+                            builder: (context, snapReq) {
+                              final isFriend = snapFriend.data == true;
+                              final reqStatus = snapReq.data; // 'pending' / 'accepted' / 'rejected' / null
+                              String trailingLabel;
+                              VoidCallback? trailingAction;
+                              if (isFriend) {
+                                trailingLabel = 'Friends';
+                              } else if (reqStatus == 'pending') {
+                                trailingLabel = 'Pending';
+                              } else {
+                                trailingLabel = 'Add Friend';
+                                trailingAction = () async {
+                                  final ok = await service.sendFriendRequest(
+                                    toUserId: r.userId,
+                                    toUserName: r.fullName.isNotEmpty ? r.fullName : r.email,
+                                  );
+                                  if (!mounted) return;
+                                  Navigator.pop(context);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text(ok ? 'Request sent' : 'Could not send request')),
+                                  );
+                                };
+                              }
+
+                              return ListTile(
+                        leading: const Icon(Icons.person_add_alt_1),
+                        title: Text(r.fullName.isNotEmpty ? r.fullName : r.email),
+                        subtitle: Text(r.email),
+                                trailing: TextButton(
+                                  onPressed: trailingAction,
+                                  child: Text(trailingLabel),
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      );
+                    }).toList(),
+                  );
+                },
+              );
+            },
+            child: const Text('Search'),
+          ),
+        ],
+      ),
+    );
+
+    // Friends leaderboard + pending requests list
+    return FutureBuilder<List<LeaderboardEntry>>(
+      future: service.getFriendsLeaderboard(limit: 15),
+      builder: (context, snapshot) {
+        final friendsEntries = snapshot.data ?? [];
+        if (friendsEntries.isEmpty) {
+          return Column(
+            children: [
+              searchBar,
+              // Pending requests section (even if no friends yet)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
+                child: StreamBuilder<List<FriendRequest>>(
+                  stream: service.getPendingRequestsStream(),
+                  builder: (context, reqSnap) {
+                    final pending = reqSnap.data ?? [];
+                    if (pending.isEmpty) return const SizedBox.shrink();
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Pending Requests', style: TextStyle(fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 8),
+                        ...pending.map((req) => Card(
+                          child: ListTile(
+                            leading: const Icon(Icons.mail_outline),
+                            title: Text(req.fromUserName.isNotEmpty ? req.fromUserName : req.fromUserId),
+                            subtitle: Text('Received ${req.receivedAt.toLocal()}'),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                TextButton(
+                                  onPressed: () async {
+                                    final ok = await service.acceptFriendRequest(
+                                      fromUserId: req.fromUserId,
+                                      fromUserName: req.fromUserName,
+                                    );
+                                    if (!mounted) return;
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text(ok ? 'Accepted' : 'Failed to accept')),
+                                    );
+                                  },
+                                  child: const Text('Accept'),
+                                ),
+                                const SizedBox(width: 8),
+                                TextButton(
+                                  onPressed: () async {
+                                    final ok = await service.rejectFriendRequest(req.fromUserId);
+                                    if (!mounted) return;
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text(ok ? 'Declined' : 'Failed to decline')),
+                                    );
+                                  },
+                                  child: const Text('Decline'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )),
+                      ],
+                    );
+                  },
+                ),
               ),
-            ),
-          ],
-        ),
-      );
-    }
-    
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 120),
-      itemCount: friendsUsers.length,
-      itemBuilder: (context, index) {
-        final user = friendsUsers[index];
-        final rank = index + 1;
-        final isCurrentUser = user['name'] == currentUserName;
-        
-        return _buildLeaderboardTile(
-          rank: rank,
-          name: user['name'] as String,
-          points: user['points'] as String,
-          streak: user['streak'] as int,
-          isDark: isDark,
-          isCurrentUser: isCurrentUser,
-          showMedal: rank <= 3,
+              Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.people_outline,
+                        size: 80,
+                        color: isDark ? Colors.white24 : Colors.black26,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'No friends yet',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.white70 : const Color(0xFF64748B),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Add friends to see their progress',
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: isDark ? Colors.white54 : const Color(0xFF94A3B8),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          );
+        }
+        // Build list with a header section for pending requests
+        return ListView.builder(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 120),
+          itemCount: friendsEntries.length + 1,
+          itemBuilder: (context, index) {
+            if (index == 0) return searchBar;
+            // Insert pending requests block after search
+            if (index == 1) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: StreamBuilder<List<FriendRequest>>(
+                  stream: service.getPendingRequestsStream(),
+                  builder: (context, reqSnap) {
+                    final pending = reqSnap.data ?? [];
+                    if (pending.isEmpty) return const SizedBox.shrink();
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Pending Requests', style: TextStyle(fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 8),
+                        ...pending.map((req) => Card(
+                          child: ListTile(
+                            leading: const Icon(Icons.mail_outline),
+                            title: Text(req.fromUserName.isNotEmpty ? req.fromUserName : req.fromUserId),
+                            subtitle: Text('Received ${req.receivedAt.toLocal()}'),
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                TextButton(
+                                  onPressed: () async {
+                                    final ok = await service.acceptFriendRequest(
+                                      fromUserId: req.fromUserId,
+                                      fromUserName: req.fromUserName,
+                                    );
+                                    if (!mounted) return;
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text(ok ? 'Accepted' : 'Failed to accept')),
+                                    );
+                                  },
+                                  child: const Text('Accept'),
+                                ),
+                                const SizedBox(width: 8),
+                                TextButton(
+                                  onPressed: () async {
+                                    final ok = await service.rejectFriendRequest(req.fromUserId);
+                                    if (!mounted) return;
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text(ok ? 'Declined' : 'Failed to decline')),
+                                    );
+                                  },
+                                  child: const Text('Decline'),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )),
+                      ],
+                    );
+                  },
+                ),
+              );
+            }
+            // Sent requests section
+            if (index == 2) {
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: StreamBuilder<List<OutgoingFriendRequest>>(
+                  stream: service.getSentRequestsStream(),
+                  builder: (context, sentSnap) {
+                    final sent = sentSnap.data ?? [];
+                    if (sent.isEmpty) return const SizedBox.shrink();
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('Sent Requests', style: TextStyle(fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 8),
+                        ...sent.map((req) => Card(
+                          child: ListTile(
+                            leading: const Icon(Icons.outgoing_mail),
+                            title: Text(req.toUserName.isNotEmpty ? req.toUserName : req.toUserId),
+                            subtitle: Text('Sent ${req.sentAt.toLocal()}'),
+                            trailing: TextButton(
+                              onPressed: () async {
+                                final ok = await service.cancelSentRequest(req.toUserId);
+                                if (!mounted) return;
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text(ok ? 'Request canceled' : 'Failed to cancel request')),
+                                );
+                              },
+                              child: const Text('Cancel'),
+                            ),
+                          ),
+                        )),
+                      ],
+                    );
+                  },
+                ),
+              );
+            }
+            final entry = friendsEntries[index - 1];
+            final rank = index; // ranks account for the search bar at index 0
+            final isCurrentUser = entry.displayName == currentUserName;
+            return _buildLeaderboardTile(
+              rank: rank,
+              name: entry.displayName,
+              points: _formatPoints(entry.xp),
+              streak: entry.streakDays,
+              isDark: isDark,
+              isCurrentUser: isCurrentUser,
+              showMedal: rank <= 3,
+            );
+          },
         );
       },
     );

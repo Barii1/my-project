@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart' show FirebaseAuth;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'ai_chat_screen.dart';
 
@@ -624,10 +625,12 @@ class _TopicQuizScreenState extends State<TopicQuizScreen> {
       final savedDate = prefs.getString('daily_goal_date') ?? '';
       if (savedDate != dateKey) {
         await prefs.setString('daily_goal_date', dateKey);
-        await prefs.setInt('daily_quiz_count', 1);
+        final uid = FirebaseAuth.instance.currentUser?.uid ?? 'anon';
+        await prefs.setInt('daily_quiz_count_$uid', 1);
       } else {
-        final current = prefs.getInt('daily_quiz_count') ?? 0;
-        await prefs.setInt('daily_quiz_count', current + 1);
+        final uid2 = FirebaseAuth.instance.currentUser?.uid ?? 'anon';
+        final current = prefs.getInt('daily_quiz_count_$uid2') ?? 0;
+        await prefs.setInt('daily_quiz_count_$uid2', current + 1);
       }
     } catch (_) {
       // ignore storage errors

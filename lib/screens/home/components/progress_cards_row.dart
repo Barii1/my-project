@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ProgressCardsRow extends StatelessWidget {
   final double dailyProgress; // 0.0 - 1.0
@@ -94,11 +96,38 @@ class _TotalXpCard extends StatelessWidget {
             child: const Icon(Icons.flash_on, color: Color(0xFFF59E0B), size: 40),
           ),
           const SizedBox(height: 16),
-          Text('3,420', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF1F2937))),
+          _XpText(isDark: isDark),
           const SizedBox(height: 4),
           Text('Total XP', style: TextStyle(fontSize: 14, color: isDark ? Colors.white70 : const Color(0xFF6B7280))),
         ],
       ),
+    );
+  }
+}
+
+class _XpText extends StatelessWidget {
+  final bool isDark;
+  const _XpText({required this.isDark});
+  @override
+  Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      return Text('0', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF1F2937)));
+    }
+    final doc = FirebaseFirestore.instance.collection('users').doc(user.uid);
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: doc.snapshots(),
+      builder: (context, snap) {
+        int xp = 0;
+        if (snap.hasData && snap.data?.data() != null) {
+          final data = snap.data!.data()!;
+          xp = (data['xp'] as int?) ?? 0;
+        }
+        return Text(
+          xp.toString(),
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF1F2937)),
+        );
+      },
     );
   }
 }

@@ -13,6 +13,7 @@ import '../providers/ai_chat_sessions_provider.dart';
 import '../services/chat_history_service.dart';
 import '../services/connectivity_service.dart';
 import '../services/groq_service.dart';
+import '../services/xp_service.dart';
 
 class Message {
   final String id;
@@ -197,10 +198,20 @@ class _AIChatScreenState extends State<AIChatScreen> with TickerProviderStateMix
       hasImage: hasImage,
     );
 
+    final wasFirstUserMessageInSession = !_messages.any((m) => m.isUser);
     setState(() {
       _messages.add(userMessage);
       _isLoading = true;
     });
+
+    // Award XP for asking an AI question or submitting an attachment
+    try {
+      await XpService().awardXpForAiQuestion(
+        isFirstMeaningfulQuestionToday: wasFirstUserMessageInSession,
+      );
+    } catch (_) {
+      // Swallow XP errors to avoid impacting chat UX
+    }
 
     _recordToSession(messageContent);
     _loadingController.repeat();

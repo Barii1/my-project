@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart' show FirebaseAuth;
 
 class DailyGoalScreen extends StatefulWidget {
   const DailyGoalScreen({super.key});
@@ -52,14 +53,16 @@ class _DailyGoalScreenState extends State<DailyGoalScreen> {
 
   Future<void> _loadCurrentGoal() async {
     final prefs = await SharedPreferences.getInstance();
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? 'anon';
     setState(() {
-      _selectedGoal = prefs.getInt('daily_goal_target') ?? 3;
+      _selectedGoal = prefs.getInt('daily_goal_target_$uid') ?? 3;
     });
   }
 
   Future<void> _saveGoal(int goal) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('daily_goal_target', goal);
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? 'anon';
+    await prefs.setInt('daily_goal_target_$uid', goal);
     setState(() => _selectedGoal = goal);
 
     if (!mounted) return;

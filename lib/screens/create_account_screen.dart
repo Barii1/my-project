@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../providers/auth_provider.dart' as app_auth;
 import '../theme/app_theme.dart';
 import '../widgets/responsive_layout.dart';
 import '../services/email_pin_service.dart';
+import '../services/friend_service.dart';
 import 'login_screen.dart';
 import 'home_screen_v3.dart';
 import 'package:flutter_figma/lib/Email%20Verification/pin_verify_screen.dart';
@@ -48,6 +50,7 @@ class _CreateAccountFormState extends State<CreateAccountForm> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
+  final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -59,6 +62,7 @@ class _CreateAccountFormState extends State<CreateAccountForm> {
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
+    _usernameController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     _phoneController.dispose();
@@ -77,6 +81,24 @@ class _CreateAccountFormState extends State<CreateAccountForm> {
 
     setState(() => _isLoading = true);
     try {
+      // Username availability check before creating account
+      final requestedUsername = _usernameController.text.trim();
+      if (requestedUsername.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please choose a username')),
+        );
+        setState(() => _isLoading = false);
+        return;
+      }
+      final available = await FriendService().isUsernameAvailable(requestedUsername);
+      if (!available) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Username is already taken. Please choose another.')),
+        );
+        setState(() => _isLoading = false);
+        return;
+      }
+
       final auth = Provider.of<app_auth.AuthProvider>(context, listen: false);
       final success = await auth.createAccount(
         _nameController.text.trim(),
@@ -90,6 +112,17 @@ class _CreateAccountFormState extends State<CreateAccountForm> {
       if (success) {
         final user = FirebaseAuth.instance.currentUser;
         if (user != null && user.email != null) {
+          // Set username after account creation
+          try {
+            // Persist username via FriendService to keep logic centralized
+            await FriendService().setUsername(requestedUsername);
+            // Also ensure core fields exist
+            await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+              'fullName': _nameController.text.trim(),
+              'email': _emailController.text.trim(),
+              'createdAt': FieldValue.serverTimestamp(),
+            }, SetOptions(merge: true));
+          } catch (_) {}
           try {
             await EmailPinService().sendPin(user.uid, user.email!);
             if (!context.mounted) return;
@@ -155,6 +188,32 @@ class _CreateAccountFormState extends State<CreateAccountForm> {
             style: AppTheme.caption(context),
           ),
           SizedBox(height: AppTheme.scaledSize(context, 0, 40).height),
+          TextFormField(
+            controller: _usernameController,
+            style: AppTheme.bodyText(context),
+            decoration: InputDecoration(
+              labelText: 'Username',
+              labelStyle: AppTheme.caption(context),
+              hintText: 'Choose a unique username',
+              hintStyle: AppTheme.caption(context).copyWith(color: Colors.black38),
+              prefixIcon: Icon(Icons.tag, color: AppTheme.primary),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Please choose a username';
+              }
+              final v = value.trim();
+              if (v.length < 3) return 'Username must be at least 3 characters';
+              if (!RegExp(r'^[a-zA-Z0-9_\.]+$').hasMatch(v)) {
+                return 'Only letters, numbers, _ and . are allowed';
+              }
+              return null;
+            },
+          ),
+          SizedBox(height: AppTheme.scaledSize(context, 0, 16).height),
           TextFormField(
             controller: _nameController,
             style: AppTheme.bodyText(context),

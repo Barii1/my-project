@@ -7,6 +7,7 @@ import '../widgets/responsive_layout.dart';
 import '../services/connectivity_service.dart';
 import 'create_account_screen.dart';
 import 'home_screen_v3.dart';
+import '../services/xp_service.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
@@ -79,6 +80,12 @@ class _LogInState extends State<LogIn> {
       setState(() => _isLoading = false);
 
       if (success) {
+        // Award XP for first login of day and recompute streak
+        try {
+          await XpService().awardXpForLogin();
+        } catch (e) {
+          debugPrint('XP login award failed: $e');
+        }
         // Defer navigation to next frame to avoid race with rebuilds
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!mounted) return;
@@ -104,7 +111,7 @@ class _LogInState extends State<LogIn> {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('fcm_token');
       if (token != null) {
-        debugPrint('FCM token: '+token);
+        debugPrint('FCM token: $token');
       }
     } catch (_) {}
   }

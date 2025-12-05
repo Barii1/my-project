@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:math';
 
 // Simple app usage tracker using local storage
 // Tracks time spent in app without complex backend
@@ -11,199 +12,165 @@ class AppUsageScreen extends StatefulWidget {
 }
 
 class _AppUsageScreenState extends State<AppUsageScreen> with WidgetsBindingObserver {
-  String _selectedPeriod = 'Today';
-  int _totalMinutes = 0;
-
+  late Future<_UsageData> _future;
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
-    _loadUsageData();
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      _loadUsageData(); // Refresh when app resumes
-    }
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    // Refresh data when screen becomes visible
-    _loadUsageData();
-  }
-
-  // Simple method: Read stored usage time from SharedPreferences
-  // Backend: Just save timestamps when app opens/closes
-  Future<void> _loadUsageData() async {
-    final prefs = await SharedPreferences.getInstance();
-    final key = 'usage_${_selectedPeriod.toLowerCase().replaceAll(' ', '_')}';
-    final seconds = prefs.getInt(key) ?? 0;
-    
-    // Debug: Print the values to verify
-    print('Loading usage for key: $key');
-    print('Seconds found: $seconds');
-    print('Minutes calculated: ${(seconds / 60).round()}');
-    
-    if (mounted) {
-      setState(() {
-        _totalMinutes = (seconds / 60).round();
-      });
-    }
+    _future = _loadUsage();
   }
   
-  String _formatTime(int minutes) {
-    if (minutes < 60) return '${minutes}min';
-    final hours = minutes ~/ 60;
-    final mins = minutes % 60;
-    if (mins == 0) return '${hours}h';
-    return '${hours}h ${mins}min';
+  Future<_UsageData> _loadUsage() async {
+    final prefs = await SharedPreferences.getInstance();
+    final now = DateTime.now();
+    final days = List.generate(7, (i) => now.subtract(Duration(days: now.weekday - 1 - i)));
+    final labels = const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    final perDayMinutes = <int>[];
+    int weeklyTotalMinutes = 0;
+    for (var d in days) {
+      final key = 'usage_${d.year}-${d.month}-${d.day}';
+      final secs = prefs.getInt(key) ?? 0;
+      final mins = (secs / 60).round();
+      perDayMinutes.add(mins);
+      weeklyTotalMinutes += mins;
+    }
+    return _UsageData(labels: labels, perDayMinutes: perDayMinutes, weeklyTotalMinutes: weeklyTotalMinutes, todayIndex: now.weekday - 1);
   }
-
+  
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF1A1A2E) : const Color(0xFFFEF7FA),
       appBar: AppBar(
         title: const Text('Screen Time'),
-        backgroundColor: isDark ? const Color(0xFF16213E) : Colors.white,
-        foregroundColor: isDark ? Colors.white : const Color(0xFF34495E),
-        elevation: 1,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadUsageData,
-            tooltip: 'Refresh',
+            tooltip: 'Reset This Week',
+            icon: const Icon(Icons.restore),
+            onPressed: () async {
+              final prefs = await SharedPreferences.getInstance();
+              final now = DateTime.now();
+              final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+              for (int i = 0; i < 7; i++) {
+                final d = startOfWeek.add(Duration(days: i));
+                final key = 'usage_${d.year}-${d.month}-${d.day}';
+                await prefs.remove(key);
+              }
+              if (mounted) {
+                setState(() => _future = _loadUsage());
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Screen Time reset for this week')),
+                );
+              }
+            },
           ),
         ],
       ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.access_time,
-                size: 80,
-                color: const Color(0xFF4DB8A8).withOpacity(0.5),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                _totalMinutes > 0 ? _formatTime(_totalMinutes) : '0min',
-                style: TextStyle(
-                  fontSize: 48,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : const Color(0xFF34495E),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _selectedPeriod,
-                style: TextStyle(
-                  fontSize: 18,
-                  color: isDark ? Colors.white70 : const Color(0xFF64748B),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                _totalMinutes == 0 ? 'Usage tracking started - use the app to see time' : 'Updates every minute while using the app',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: isDark ? Colors.white54 : const Color(0xFF94A3B8),
-                ),
-              ),
-              const SizedBox(height: 40),
-              _buildPeriodSelector(isDark),
-              const SizedBox(height: 32),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF4DB8A8).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: const Color(0xFF4DB8A8).withOpacity(0.3),
-                  ),
-                ),
-                child: Row(
+      body: FutureBuilder<_UsageData>(
+        future: _future,
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          final data = snapshot.data!;
+          final maxMinutes = max(60, data.perDayMinutes.reduce((a, b) => max(a, b))); // at least 1h for scale
+  
+          return RefreshIndicator(
+            onRefresh: () async {
+              setState(() => _future = _loadUsage());
+            },
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Icon(
-                      Icons.info_outline,
-                      color: Color(0xFF4DB8A8),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Usage tracking is automatic. Keep using the app!',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: isDark ? Colors.white70 : const Color(0xFF64748B),
-                        ),
-                      ),
-                    ),
+                    Text('This Week', style: Theme.of(context).textTheme.titleLarge),
+                    _TotalChip(minutes: data.weeklyTotalMinutes),
                   ],
                 ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPeriodSelector(bool isDark) {
-    final periods = ['Today', 'This Week', 'This Month'];
-    
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF16213E) : const Color(0xFFF3F4F6),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: periods.map((period) {
-          final isSelected = _selectedPeriod == period;
-          return Expanded(
-            child: GestureDetector(
-              onTap: () {
-                setState(() => _selectedPeriod = period);
-                _loadUsageData();
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? const Color(0xFF4DB8A8)
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  period,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                    color: isSelected
-                        ? Colors.white
-                        : (isDark ? Colors.white70 : const Color(0xFF64748B)),
-                  ),
-                ),
-              ),
+                const SizedBox(height: 16),
+                _BarChart(labels: data.labels, values: data.perDayMinutes, maxValue: maxMinutes, highlightIndex: data.todayIndex, isDark: isDark),
+                const SizedBox(height: 24),
+                Text('Details', style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 8),
+                ...List.generate(7, (i) {
+                  final mins = data.perDayMinutes[i];
+                  return ListTile(
+                    title: Text(data.labels[i]),
+                    trailing: Text('${mins} min'),
+                  );
+                }),
+              ],
             ),
           );
-        }).toList(),
+        },
       ),
     );
   }
 }
+
+class _UsageData {
+  final List<String> labels;
+  final List<int> perDayMinutes;
+  final int weeklyTotalMinutes;
+  final int todayIndex;
+  _UsageData({required this.labels, required this.perDayMinutes, required this.weeklyTotalMinutes, required this.todayIndex});
+}
+
+class _TotalChip extends StatelessWidget {
+  final int minutes;
+  const _TotalChip({required this.minutes});
+  @override
+  Widget build(BuildContext context) {
+    final hours = minutes ~/ 60;
+    final mins = minutes % 60;
+    final text = hours > 0 ? '${hours}h ${mins}m' : '${mins} min';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(color: const Color(0xFF10B981).withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+      child: Text(text, style: const TextStyle(color: Color(0xFF10B981), fontWeight: FontWeight.w600)),
+    );
+  }
+}
+
+class _BarChart extends StatelessWidget {
+  final List<String> labels;
+  final List<int> values;
+  final int maxValue;
+  final int highlightIndex;
+  final bool isDark;
+  const _BarChart({required this.labels, required this.values, required this.maxValue, required this.highlightIndex, required this.isDark});
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: List.generate(values.length, (i) {
+        final v = values[i];
+        final h = (v / maxValue) * 140;
+        final isToday = i == highlightIndex;
+        return Column(
+          children: [
+            Text(v > 0 ? '${v}m' : '', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: isToday ? const Color(0xFF3DA89A) : const Color(0xFF9CA3AF))),
+            const SizedBox(height: 6),
+            Container(
+              width: 32,
+              height: h,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: isToday ? [const Color(0xFF4DB8A8), const Color(0xFF3DA89A)] : [const Color(0xFFE5E7EB), const Color(0xFFD1D5DB)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(labels[i], style: TextStyle(fontSize: 12, fontWeight: isToday ? FontWeight.w600 : FontWeight.normal, color: isToday ? const Color(0xFF3DA89A) : const Color(0xFF6B7280))),
+          ],
+        );
+      }),
+    );
+  }
+}
+

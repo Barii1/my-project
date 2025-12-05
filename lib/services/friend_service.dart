@@ -31,6 +31,62 @@ class FriendService {
 
   String? get _currentUserId => _auth.currentUser?.uid;
 
+  // USERNAME MANAGEMENT
+  Future<bool> isUsernameAvailable(String username) async {
+    final uname = username.trim().toLowerCase();
+    if (uname.isEmpty) return false;
+    final snap = await _firestore
+        .collection('users')
+        .where('usernameLower', isEqualTo: uname)
+        .limit(1)
+        .get();
+    return snap.docs.isEmpty;
+  }
+
+  Future<bool> setUsername(String username) async {
+    final userId = _currentUserId;
+    if (userId == null) return false;
+    final uname = username.trim();
+    if (uname.isEmpty) return false;
+    final available = await isUsernameAvailable(uname);
+    if (!available) return false;
+    try {
+      await _firestore.collection('users').doc(userId).set({
+        'username': uname,
+        'usernameLower': uname.toLowerCase(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<List<UserSearchResult>> searchUsersByUsernamePrefix(String prefix) async {
+    final p = prefix.trim().toLowerCase();
+    if (p.isEmpty) return [];
+    final currentUserId = _currentUserId;
+    if (currentUserId == null) return [];
+    try {
+      final snapshot = await _firestore
+          .collection('users')
+          .where('usernameLower', isGreaterThanOrEqualTo: p)
+          .where('usernameLower', isLessThanOrEqualTo: '$p\uf8ff')
+          .limit(20)
+          .get();
+      return snapshot.docs.where((d) => d.id != currentUserId).map((doc) {
+        final data = doc.data();
+        return UserSearchResult(
+          userId: doc.id,
+          fullName: data['fullName'] ?? '',
+          email: data['email'] ?? '',
+        );
+      }).toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
   /// Search for users by name (case-insensitive)
   /// Returns list of users matching the query
   Future<List<UserSearchResult>> searchUsers(String query) async {
@@ -480,6 +536,71 @@ class FriendService {
     }
   }
 
+  /// Stream of sent (outgoing) pending friend requests
+  Stream<List<OutgoingFriendRequest>> getSentRequestsStream() {
+    final currentUserId = _currentUserId;
+    if (currentUserId == null) {
+      return Stream.value([]);
+    }
+
+    return _firestore
+        .collection('users')
+        .doc(currentUserId)
+        .collection('friendRequests')
+        .doc('sent')
+        .collection('requests')
+        .where('status', isEqualTo: 'pending')
+        .orderBy('sentAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        return OutgoingFriendRequest(
+          requestId: doc.id,
+          toUserId: data['toUserId'] ?? '',
+          toUserName: data['toUserName'] ?? '',
+          sentAt: (data['sentAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+        );
+      }).toList();
+    });
+  }
+
+  /// Cancel a previously sent friend request (pending state)
+  Future<bool> cancelSentRequest(String toUserId) async {
+    final currentUserId = _currentUserId;
+    if (currentUserId == null) return false;
+    try {
+      final batch = _firestore.batch();
+
+      // Delete sender's sent request doc
+      batch.delete(
+        _firestore
+            .collection('users')
+            .doc(currentUserId)
+            .collection('friendRequests')
+            .doc('sent')
+            .collection('requests')
+            .doc(toUserId),
+      );
+
+      // Delete receiver's corresponding received request doc
+      batch.delete(
+        _firestore
+            .collection('users')
+            .doc(toUserId)
+            .collection('friendRequests')
+            .doc('received')
+            .collection('requests')
+            .doc(currentUserId),
+      );
+
+      await batch.commit();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
   /// Remove a friend
   Future<bool> removeFriend(String friendId) async {
     final currentUserId = _currentUserId;
@@ -512,6 +633,70 @@ class FriendService {
       return false;
     }
   }
+
+  // LEADERBOARDS
+  Future<List<LeaderboardEntry>> getGlobalLeaderboard({int limit = 15}) async {
+    try {
+      final snap = await _firestore
+          .collection('users')
+          .orderBy('xp', descending: true)
+          .limit(limit)
+          .get();
+      return snap.docs.map((doc) {
+        final data = doc.data();
+        return LeaderboardEntry(
+          userId: doc.id,
+          displayName: data['fullName'] ?? (data['username'] ?? 'User'),
+          username: data['username'] ?? '',
+          xp: (data['xp'] as int?) ?? 0,
+          streakDays: (data['streakDays'] as int?) ?? 0,
+        );
+      }).toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<List<LeaderboardEntry>> getFriendsLeaderboard({int limit = 15}) async {
+    final currentUserId = _currentUserId;
+    if (currentUserId == null) return [];
+    try {
+      final friendsSnap = await _firestore
+          .collection('users')
+          .doc(currentUserId)
+          .collection('friends')
+          .get();
+      final friendIds = friendsSnap.docs.map((d) => d.id).toList();
+      if (friendIds.isEmpty) return [];
+      // Firestore doesn't support IN > 10 limits in some tiers, chunk if large
+      final chunks = <List<String>>[];
+      for (var i = 0; i < friendIds.length; i += 10) {
+        chunks.add(friendIds.sublist(i, i + 10 > friendIds.length ? friendIds.length : i + 10));
+      }
+      final results = <LeaderboardEntry>[];
+      for (final chunk in chunks) {
+        final snap = await _firestore
+            .collection('users')
+            .where(FieldPath.documentId, whereIn: chunk)
+            .get();
+        results.addAll(snap.docs.map((doc) {
+          final data = doc.data();
+          return LeaderboardEntry(
+            userId: doc.id,
+            displayName: data['fullName'] ?? (data['username'] ?? 'User'),
+            username: data['username'] ?? '',
+            xp: (data['xp'] as int?) ?? 0,
+            streakDays: (data['streakDays'] as int?) ?? 0,
+          );
+        }));
+      }
+      // Sort by XP desc and cap to limit
+      results.sort((a, b) => b.xp.compareTo(a.xp));
+      return results.take(limit).toList();
+    } catch (e) {
+      return [];
+    }
+  }
 }
 
 /// User search result model
@@ -542,6 +727,20 @@ class FriendRequest {
   });
 }
 
+class OutgoingFriendRequest {
+  final String requestId;
+  final String toUserId;
+  final String toUserName;
+  final DateTime sentAt;
+
+  OutgoingFriendRequest({
+    required this.requestId,
+    required this.toUserId,
+    required this.toUserName,
+    required this.sentAt,
+  });
+}
+
 /// Friend model
 class Friend {
   final String userId;
@@ -552,5 +751,21 @@ class Friend {
     required this.userId,
     required this.friendName,
     required this.addedAt,
+  });
+}
+
+class LeaderboardEntry {
+  final String userId;
+  final String displayName;
+  final String username;
+  final int xp;
+  final int streakDays;
+
+  LeaderboardEntry({
+    required this.userId,
+    required this.displayName,
+    required this.username,
+    required this.xp,
+    required this.streakDays,
   });
 }

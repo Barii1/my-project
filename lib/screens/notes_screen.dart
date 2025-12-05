@@ -9,6 +9,7 @@ import '../services/groq_service.dart';
 import '../services/pdf_extractor_service.dart';
 import '../models/flashcard.dart';
 import 'flashcard_from_pdf_screen.dart';
+import '../services/xp_service.dart';
 
 class NotesScreen extends StatefulWidget {
   const NotesScreen({super.key});
@@ -95,6 +96,8 @@ class _NotesScreenState extends State<NotesScreen>
         _isSaving = false;
         _lastSaved = DateTime.now();
       });
+      // Award XP for creating/saving a note (debounced)
+      XpService().awardXpForNoteOrFlashcardCreated();
     });
   }
 
@@ -745,7 +748,23 @@ class _GeneratedQuizPlayScreenState extends State<_GeneratedQuizPlayScreen> {
         children: [
           Text('Score: $_score/${widget.questions.length}', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: isDark ? Colors.white : const Color(0xFF34495E))),
           const SizedBox(height: 12),
-          ElevatedButton(onPressed: () => Navigator.pop(context), child: const Text('Done')),
+          ElevatedButton(
+            onPressed: () async {
+              // Award XP for completing this generated quiz
+              final total = widget.questions.length;
+              final percent = total == 0 ? 0.0 : (_score / total) * 100.0;
+              try {
+                await XpService().awardXpForQuizCompletion(
+                  questionCount: total,
+                  scorePercent: percent,
+                  noSkippedQuestions: true,
+                  subjectId: 'notes-generated',
+                );
+              } catch (_) {}
+              if (context.mounted) Navigator.pop(context);
+            },
+            child: const Text('Done'),
+          ),
         ],
       ),
     );

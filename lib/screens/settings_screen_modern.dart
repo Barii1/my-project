@@ -5,7 +5,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import '../providers/theme_provider.dart';
-import '../providers/stats_provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+// stats_provider removed for XP display; now using Firestore stream
 import 'settings/appearance_settings_screen.dart';
 import 'settings/notifications_settings_screen.dart';
 import 'settings/help_faq_screen.dart';
@@ -176,7 +177,7 @@ class _SettingsScreenModernState extends State<SettingsScreenModern> {
                 context,
                 icon: Icons.av_timer,
                 iconColor: const Color(0xFF9B59B6),
-                title: 'App Usage & Screen Time',
+                title: 'Screen Time',
                 subtitle: 'Track your study habits',
                 onTap: () {
                   Navigator.push(
@@ -426,17 +427,39 @@ class _SettingsScreenModernState extends State<SettingsScreenModern> {
                       ),
                     ),
                     const SizedBox(height: 2),
-                    Consumer<StatsProvider>(
-                      builder: (context, stats, _) => Text(
-                        '${stats.totalXp.toString()} XP',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: isDark ? Colors.white : const Color(0xFF34495E),
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ),
+                    Builder(builder: (context) {
+                      final user = FirebaseAuth.instance.currentUser;
+                      if (user == null) {
+                        return Text(
+                          '0 XP',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white : const Color(0xFF34495E),
+                            letterSpacing: 0.5,
+                          ),
+                        );
+                      }
+                      final doc = FirebaseFirestore.instance.collection('users').doc(user.uid);
+                      return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                        stream: doc.snapshots(),
+                        builder: (context, snap) {
+                          int xp = 0;
+                          if (snap.hasData && snap.data?.data() != null) {
+                            xp = (snap.data!.data()!['xp'] as int?) ?? 0;
+                          }
+                          return Text(
+                            '$xp XP',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? Colors.white : const Color(0xFF34495E),
+                              letterSpacing: 0.5,
+                            ),
+                          );
+                        },
+                      );
+                    }),
                   ],
                 ),
               ],

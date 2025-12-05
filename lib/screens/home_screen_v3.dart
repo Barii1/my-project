@@ -20,6 +20,8 @@ import 'settings/app_usage_screen.dart';
 import 'package:provider/provider.dart';
 import '../widgets/offline_indicator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart' show FirebaseAuth;
+import '../services/usage_service.dart';
 
 class HomeScreenV3 extends StatefulWidget {
   const HomeScreenV3({super.key});
@@ -46,26 +48,37 @@ class _HomeScreenV3State extends State<HomeScreenV3> with WidgetsBindingObserver
     _startUsageTracking();
   }
 
+  String _formatMinutesLabel(int minutes) {
+    if (minutes < 60) {
+      return '$minutes min';
+    }
+    final hours = minutes ~/ 60;
+    final mins = minutes % 60;
+    final hrsPart = hours == 1 ? '1 hr' : '$hours hrs';
+    return mins == 0 ? hrsPart : '$hrsPart $mins min';
+  }
+
   Future<void> _loadDailyGoal() async {
     final prefs = await SharedPreferences.getInstance();
     final today = DateTime.now();
     final dateKey = '${today.year}-${today.month}-${today.day}';
-    final savedDate = prefs.getString('daily_goal_date') ?? '';
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? 'anon';
+    final savedDate = prefs.getString('daily_goal_date_$uid') ?? '';
     
     // Load the target goal from preferences
-    final targetGoal = prefs.getInt('daily_goal_target') ?? 3;
+    final targetGoal = prefs.getInt('daily_goal_target_$uid') ?? 3;
     
     // Reset counter if it's a new day
     if (savedDate != dateKey) {
-      await prefs.setInt('daily_quiz_count', 0);
-      await prefs.setString('daily_goal_date', dateKey);
+      await prefs.setInt('daily_quiz_count_$uid', 0);
+      await prefs.setString('daily_goal_date_$uid', dateKey);
       setState(() {
         _dailyQuizCount = 0;
         _dailyGoal = targetGoal;
       });
     } else {
       setState(() {
-        _dailyQuizCount = prefs.getInt('daily_quiz_count') ?? 0;
+        _dailyQuizCount = prefs.getInt('daily_quiz_count_$uid') ?? 0;
         _dailyGoal = targetGoal;
       });
     }
@@ -89,6 +102,13 @@ class _HomeScreenV3State extends State<HomeScreenV3> with WidgetsBindingObserver
     } else if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
       _endSession();
       _usageTimer?.cancel();
+      // Sync current day/week usage when app goes to background
+      () async {
+        try {
+          await UsageService.syncTodayToFirestore();
+          await UsageService.syncWeekAggregateToFirestore();
+        } catch (_) {}
+      }();
     }
   }
 
@@ -103,22 +123,13 @@ class _HomeScreenV3State extends State<HomeScreenV3> with WidgetsBindingObserver
     final prefs = await SharedPreferences.getInstance();
     final today = DateTime.now();
     final dateKey = '${today.year}-${today.month}-${today.day}';
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? 'anon';
     
     // Save for today
-    final todayKey = 'usage_$dateKey';
+    final todayKey = 'usage_${uid}_$dateKey';
     final todayCurrent = prefs.getInt(todayKey) ?? 0;
-    await prefs.setInt(todayKey, todayCurrent + 60); // Add 60 seconds (1 minute)
-    
-    // Also update aggregated keys for app usage screen
-    final todaySeconds = prefs.getInt('usage_today') ?? 0;
-    await prefs.setInt('usage_today', todaySeconds + 60);
-    
-    // Update week and month aggregates
-    final weekSeconds = prefs.getInt('usage_this_week') ?? 0;
-    await prefs.setInt('usage_this_week', weekSeconds + 60);
-    
-    final monthSeconds = prefs.getInt('usage_this_month') ?? 0;
-    await prefs.setInt('usage_this_month', monthSeconds + 60);
+    final capped = (todayCurrent + 60).clamp(0, 24 * 3600); // cap at 24h per day
+    await prefs.setInt(todayKey, capped);
   }
 
   Future<void> _beginSession() async {
@@ -134,19 +145,16 @@ class _HomeScreenV3State extends State<HomeScreenV3> with WidgetsBindingObserver
     final prefs = await SharedPreferences.getInstance();
     final today = DateTime.now();
     final dateKey = '${today.year}-${today.month}-${today.day}';
-    final key = 'usage_$dateKey';
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? 'anon';
+    final key = 'usage_${uid}_$dateKey';
     final current = prefs.getInt(key) ?? 0;
-    await prefs.setInt(key, current + seconds);
-    
-    // Also update aggregated keys for app usage screen
-    final todaySeconds = prefs.getInt('usage_today') ?? 0;
-    await prefs.setInt('usage_today', todaySeconds + seconds);
-    
-    final weekSeconds = prefs.getInt('usage_this_week') ?? 0;
-    await prefs.setInt('usage_this_week', weekSeconds + seconds);
-    
-    final monthSeconds = prefs.getInt('usage_this_month') ?? 0;
-    await prefs.setInt('usage_this_month', monthSeconds + seconds);
+    final capped = (current + seconds).clamp(0, 24 * 3600);
+    await prefs.setInt(key, capped);
+    // Best-effort sync to Firestore for cross-device analytics
+    try {
+      await UsageService.syncTodayToFirestore();
+      await UsageService.syncWeekAggregateToFirestore();
+    } catch (_) {}
   }
 
   Future<void> _updateDailyStreak() async {
@@ -482,26 +490,25 @@ class _HomeScreenV3State extends State<HomeScreenV3> with WidgetsBindingObserver
     final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     final now = DateTime.now();
     final currentDayIndex = now.weekday - 1;
-    const maxHours = 5.0;
+    const maxMinutes = 5 * 60.0; // 5 hours = 300 minutes
 
-    return FutureBuilder<SharedPreferences>(
-      future: SharedPreferences.getInstance(),
+    return FutureBuilder<List<dynamic>>(
+      future: Future.wait([
+        UsageService.getWeekSeconds(),
+        UsageService.getLast7DaysSeconds(),
+      ]),
       builder: (context, snapshot) {
-        final prefs = snapshot.data;
-        final List<double> weekData = [];
-        double totalHours = 0.0;
-        if (prefs != null) {
-          for (int i = 0; i < 7; i++) {
-            final day = now.subtract(Duration(days: now.weekday - 1 - i));
-            final dateKey = '${day.year}-${day.month}-${day.day}';
-            final secs = prefs.getInt('usage_$dateKey') ?? 0;
-            final hrs = secs / 3600.0;
-            final rounded = double.parse(hrs.toStringAsFixed(2));
-            weekData.add(rounded);
-            totalHours += rounded;
+        final List<double> weekMinutes = [];
+        int totalSec = 0;
+        if (snapshot.hasData && snapshot.data!.length == 2) {
+          totalSec = snapshot.data![0] as int; // week seconds
+          final last7 = snapshot.data![1] as List<int>; // per-day seconds
+          for (final secs in last7) {
+            final mins = secs / 60.0;
+            weekMinutes.add(mins);
           }
         } else {
-          weekData.addAll(List.filled(7, 0.0));
+          weekMinutes.addAll(List.filled(7, 0.0));
         }
 
         return InkWell(
@@ -546,7 +553,7 @@ class _HomeScreenV3State extends State<HomeScreenV3> with WidgetsBindingObserver
                         ),
                         const SizedBox(width: 12),
                         Text(
-                          'Data Analytics',
+                          'Screen Time',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -562,7 +569,7 @@ class _HomeScreenV3State extends State<HomeScreenV3> with WidgetsBindingObserver
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        '${totalHours.toStringAsFixed(1)} hrs',
+                        _formatMinutesLabel((totalSec / 60).round()),
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
@@ -585,14 +592,14 @@ class _HomeScreenV3State extends State<HomeScreenV3> with WidgetsBindingObserver
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: List.generate(7, (index) {
-                    final value = weekData[index];
-                    final height = (value / maxHours) * 120;
+                    final valueMin = weekMinutes[index];
+                    final height = (valueMin / maxMinutes) * 120;
                     final isToday = index == currentDayIndex;
                     return GestureDetector(
                       onTap: () {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text('${days[index]}: ${value.toStringAsFixed(2)} hours'),
+                            content: Text('${days[index]}: ' + _formatMinutesLabel(valueMin.round())),
                             duration: const Duration(seconds: 1),
                             behavior: SnackBarBehavior.floating,
                           ),
@@ -601,7 +608,7 @@ class _HomeScreenV3State extends State<HomeScreenV3> with WidgetsBindingObserver
                       child: Column(
                         children: [
                           Text(
-                            value.toStringAsFixed(2),
+                            _formatMinutesLabel(valueMin.round()),
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w600,
