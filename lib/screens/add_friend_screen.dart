@@ -36,8 +36,12 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
     setState(() => _isSearching = true);
 
     try {
-      print('🔍 Searching for users with query: "$query"');
-      final results = await _friendService.searchUsers(query);
+      print('🔍 Searching by username prefix: "$query"');
+      var results = await _friendService.searchUsersByUsernamePrefix(query);
+      if (results.isEmpty) {
+        print('⚠️ No username matches, falling back to name search');
+        results = await _friendService.searchUsers(query);
+      }
       print('📊 Search returned ${results.length} results');
       
       for (var user in results) {
@@ -188,7 +192,7 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
                   color: isDark ? Colors.white : const Color(0xFF34495E),
                 ),
                 decoration: InputDecoration(
-                  hintText: 'Search users by name...',
+                    hintText: 'Search by username or name...',
                   hintStyle: TextStyle(
                     color: isDark ? Colors.white38 : const Color(0xFF9CA3AF),
                   ),

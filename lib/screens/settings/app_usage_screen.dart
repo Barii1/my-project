@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart' show FirebaseAuth;
 import 'dart:math';
 
 // Simple app usage tracker using local storage
@@ -22,12 +23,13 @@ class _AppUsageScreenState extends State<AppUsageScreen> with WidgetsBindingObse
   Future<_UsageData> _loadUsage() async {
     final prefs = await SharedPreferences.getInstance();
     final now = DateTime.now();
+    final uid = FirebaseAuth.instance.currentUser?.uid ?? 'anon';
     final days = List.generate(7, (i) => now.subtract(Duration(days: now.weekday - 1 - i)));
     final labels = const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     final perDayMinutes = <int>[];
     int weeklyTotalMinutes = 0;
     for (var d in days) {
-      final key = 'usage_${d.year}-${d.month}-${d.day}';
+      final key = 'usage_${uid}_${d.year}-${d.month}-${d.day}';
       final secs = prefs.getInt(key) ?? 0;
       final mins = (secs / 60).round();
       perDayMinutes.add(mins);
@@ -49,10 +51,11 @@ class _AppUsageScreenState extends State<AppUsageScreen> with WidgetsBindingObse
             onPressed: () async {
               final prefs = await SharedPreferences.getInstance();
               final now = DateTime.now();
+              final uid = FirebaseAuth.instance.currentUser?.uid ?? 'anon';
               final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
               for (int i = 0; i < 7; i++) {
                 final d = startOfWeek.add(Duration(days: i));
-                final key = 'usage_${d.year}-${d.month}-${d.day}';
+                final key = 'usage_${uid}_${d.year}-${d.month}-${d.day}';
                 await prefs.remove(key);
               }
               if (mounted) {

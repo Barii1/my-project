@@ -68,17 +68,38 @@ class FriendService {
     final currentUserId = _currentUserId;
     if (currentUserId == null) return [];
     try {
-      final snapshot = await _firestore
-          .collection('users')
+      // Primary: prefix match on usernameLower
+      final col = _firestore.collection('users');
+      final byPrefix = await col
           .where('usernameLower', isGreaterThanOrEqualTo: p)
           .where('usernameLower', isLessThanOrEqualTo: '$p\uf8ff')
           .limit(20)
           .get();
-      return snapshot.docs.where((d) => d.id != currentUserId).map((doc) {
+
+      var docs = byPrefix.docs;
+
+      // Fallback 1: exact match if prefix returned nothing
+      if (docs.isEmpty) {
+        final exact = await col.where('usernameLower', isEqualTo: p).limit(20).get();
+        docs = exact.docs;
+      }
+
+      // Fallback 2: try displayName/fullName contains search (client-side)
+      if (docs.isEmpty) {
+        final all = await col.limit(50).get();
+        docs = all.docs.where((d) {
+          final data = d.data();
+          final dn = (data['username'] ?? data['displayName'] ?? data['fullName'] ?? '').toString().toLowerCase();
+          return dn.contains(p);
+        }).toList();
+      }
+
+      return docs.where((d) => d.id != currentUserId).map((doc) {
         final data = doc.data();
+        final fullName = (data['fullName'] ?? data['displayName'] ?? data['username'] ?? '').toString();
         return UserSearchResult(
           userId: doc.id,
-          fullName: data['fullName'] ?? '',
+          fullName: fullName,
           email: data['email'] ?? '',
         );
       }).toList();
