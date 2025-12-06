@@ -12,10 +12,8 @@ import 'settings/notifications_settings_screen.dart';
 import 'settings/help_faq_screen.dart';
 import 'settings/feedback_screen.dart';
 import 'settings/profile_settings_screen.dart';
-import 'settings/data_usage_screen.dart';
 import 'settings/security_settings_screen.dart';
 import 'settings/delete_account_screen.dart';
-import 'settings/app_usage_screen.dart';
 
 class SettingsScreenModern extends StatefulWidget {
   final Map<String, String> user;
@@ -159,31 +157,6 @@ class _SettingsScreenModernState extends State<SettingsScreenModern> {
                       MaterialPageRoute(
                           builder: (context) =>
                               const NotificationsSettingsScreen()));
-                },
-              ),
-              _buildSettingsItem(
-                context,
-                icon: Icons.data_usage,
-                iconColor: const Color(0xFF2ECC71),
-                title: 'Data Usage',
-                onTap: () {
-                  Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const DataUsageScreen()));
-                },
-              ),
-              _buildSettingsItem(
-                context,
-                icon: Icons.av_timer,
-                iconColor: const Color(0xFF9B59B6),
-                title: 'Screen Time',
-                subtitle: 'Track your study habits',
-                onTap: () {
-                  Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => const AppUsageScreen()));
                 },
               ),
             ]),

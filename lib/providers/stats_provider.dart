@@ -1,9 +1,9 @@
 import 'package:flutter/foundation.dart';
 
 class StatsProvider with ChangeNotifier {
-  int _streakDays = 12;
-  double _dailyGoalProgress = 0.65; // 0.0 - 1.0
-  int _totalXp = 3420;
+  int _streakDays = 0;
+  double _dailyGoalProgress = 0.0; // 0.0 - 1.0
+  int _totalXp = 0;
   final Map<String, double> _subjectAccuracy = {
     'Computer Science': 0.0,
     'Mathematics': 0.0,
@@ -12,8 +12,8 @@ class StatsProvider with ChangeNotifier {
     'Algorithms': 0.0,
     'Science': 0.0,
   };
-  final List<String> _badges = ['gold', 'silver', 'bronze'];
-  final List<String> _earnedBadges = ['7-Day Streak', 'Quiz Master', 'Note Taker'];
+  final List<String> _badges = [];
+  final List<String> _earnedBadges = [];
   
   // Weekly performance data (dynamic)
   final List<Map<String, Object>> _weeklyData = [

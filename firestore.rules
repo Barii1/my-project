@@ -16,7 +16,9 @@ service cloud.firestore {
     // Users collection
     match /users/{userId} {
       allow read: if isSignedIn();
-      allow create, update, delete: if isOwner(userId) || isAdmin();
+      // Allow create if the user is creating their own document (userId matches auth.uid)
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update, delete: if isOwner(userId) || isAdmin();
     }
 
       // Daily screen time totals per user (synced from device)

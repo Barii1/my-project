@@ -33,7 +33,10 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
       return;
     }
 
-    setState(() => _isSearching = true);
+    setState(() {
+      _isSearching = true;
+      _query = query; // Set query immediately
+    });
 
     try {
       print('🔍 Searching by username prefix: "$query"');
@@ -50,17 +53,25 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
       
       // Check friend status for each result
       for (var user in results) {
-        final isFriend = await _friendService.isFriend(user.userId);
-        final requestStatus = await _friendService.getRequestStatus(user.userId);
-        
-        _isFriendCache[user.userId] = isFriend;
-        _requestStatusCache[user.userId] = requestStatus;
+        // Skip friend status check for demo users to avoid errors
+        if (user.userId.startsWith('demo_search_')) {
+          _isFriendCache[user.userId] = false;
+          _requestStatusCache[user.userId] = null;
+        } else {
+          final isFriend = await _friendService.isFriend(user.userId);
+          final requestStatus = await _friendService.getRequestStatus(user.userId);
+          
+          _isFriendCache[user.userId] = isFriend;
+          _requestStatusCache[user.userId] = requestStatus;
+        }
       }
       
       setState(() {
         _searchResults = results;
         _isSearching = false;
       });
+      
+      print('✅ Updated UI with ${results.length} results');
     } catch (e) {
       print('❌ Search error: $e');
       setState(() => _isSearching = false);
@@ -280,6 +291,7 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
                               final user = _searchResults[i];
                               final isFriend = _isFriendCache[user.userId] ?? false;
                               final requestStatus = _requestStatusCache[user.userId];
+                              final isDemoUser = user.userId.startsWith('demo_search_');
                               
                               return Container(
                                 margin: const EdgeInsets.only(bottom: 12),
@@ -373,7 +385,16 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
                                       )
                                     else
                                       ElevatedButton(
-                                        onPressed: () => _sendFriendRequest(user),
+                                        onPressed: isDemoUser 
+                                            ? () {
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text('This is a demo user for testing'),
+                                                    backgroundColor: Color(0xFF3DA89A),
+                                                  ),
+                                                );
+                                              }
+                                            : () => _sendFriendRequest(user),
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: const Color(0xFF4DB8A8),
                                           foregroundColor: Colors.white,

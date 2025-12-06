@@ -358,12 +358,16 @@ class XpService {
     final today = _midnight(now);
     final last = state.lastActiveDate != null ? _midnight(state.lastActiveDate!) : null;
     if (last == null) {
-      state.streakDays = 1;
+      // First ever login - don't give a streak yet
+      // Streak starts at 0 and will become 1 on their next login if consecutive
+      state.streakDays = 0;
     } else if (_isSameDay(last, today)) {
-      // same day, keep
+      // same day, keep current streak
     } else if (_isSameDay(last, today.subtract(const Duration(days: 1)))) {
+      // consecutive day - increment streak
       state.streakDays += 1;
     } else {
+      // Missed a day - reset to 1 (today counts as new streak start)
       state.streakDays = 1;
     }
     state.lastActiveDate = today;

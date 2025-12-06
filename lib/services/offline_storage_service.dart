@@ -232,6 +232,10 @@ class OfflineStorageService {
     await _auth.put('is_logged_in', false);
   }
 
+  static Future<void> clearAuthCache() async {
+    await _auth.clear();
+  }
+
   static int? getLastLoginTime() {
     return _auth.get('last_login') as int?;
   }

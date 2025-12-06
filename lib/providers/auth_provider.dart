@@ -1,13 +1,11 @@
 ﻿import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/offline_storage_service.dart';
-import '../services/connectivity_service.dart';
 import '../services/database_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AuthProvider with ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  ConnectivityService? _connectivityService;
 
   bool _isAuthenticated = false;
   String? _email;
@@ -20,10 +18,6 @@ class AuthProvider with ChangeNotifier {
   String? get email => _email;
   String? get fullName => _fullName;
   bool get isOfflineMode => _isOfflineMode;
-
-  void setConnectivityService(ConnectivityService service) {
-    _connectivityService = service;
-  }
 
   AuthProvider() {
     // Check if user was logged in offline
@@ -73,14 +67,8 @@ class AuthProvider with ChangeNotifier {
   Future<bool> login(String email, String password) async {
     debugPrint('AuthProvider.login called for email: $email');
     
-    // Check if offline
-    final isOffline = _connectivityService?.isOffline ?? false;
-    
-    if (isOffline) {
-      // Offline login - check cached credentials
-      return _loginOffline(email, password);
-    }
-    
+    // ALWAYS try Firebase Auth first, even if offline
+    // Only fall back to offline mode if network error occurs
     try {
       final cred = await _auth.signInWithEmailAndPassword(
         email: email,
@@ -112,11 +100,35 @@ class AuthProvider with ChangeNotifier {
         return false;
       }
     } on FirebaseAuthException catch (e) {
-      // If offline, try offline login as fallback
+      // Only try offline login if it's a network error
       if (e.code == 'network-request-failed') {
+        debugPrint('Network error detected, trying offline login...');
         return _loginOffline(email, password);
       }
-      _lastError = '${e.code}: ${e.message}';
+      
+      // Provide user-friendly error messages
+      String errorMessage;
+      switch (e.code) {
+        case 'user-not-found':
+          errorMessage = 'No account found with this email. Please create an account.';
+          break;
+        case 'wrong-password':
+          errorMessage = 'Incorrect password. Please try again.';
+          break;
+        case 'invalid-email':
+          errorMessage = 'Invalid email format. Please check your email.';
+          break;
+        case 'user-disabled':
+          errorMessage = 'This account has been disabled.';
+          break;
+        case 'invalid-credential':
+          errorMessage = 'Invalid email or password. Please check your credentials and try again.';
+          break;
+        default:
+          errorMessage = e.message ?? 'Login failed. Please try again.';
+      }
+      
+      _lastError = errorMessage;
       debugPrint('FirebaseAuth login error: ${e.code} - ${e.message}');
       notifyListeners();
       return false;
@@ -146,10 +158,17 @@ class AuthProvider with ChangeNotifier {
         debugPrint('AuthProvider.login offline mode success for $email');
         notifyListeners();
         return true;
+      } else {
+        // Password hash mismatch - clear cache and require online login
+        debugPrint('Password hash mismatch - clearing cached credentials');
+        await OfflineStorageService.clearAuthCache();
+        _lastError = 'Please connect to the internet to log in with new credentials';
+        notifyListeners();
+        return false;
       }
     }
     
-    _lastError = 'Invalid credentials or no offline data available';
+    _lastError = 'No offline credentials available. Please connect to the internet to log in.';
     notifyListeners();
     return false;
   }
@@ -193,6 +212,14 @@ class AuthProvider with ChangeNotifier {
           'phone': phone,
           'createdAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
+          // Initialize XP state for new users
+          'xp': 0,
+          'dailyXp': 0,
+          'dailyAiXp': 0,
+          'streakDays': 0,
+          'quizCount': 0,
+          'aiSessionsWeekCount': 0,
+          'achievements': {},
         };
         await DatabaseService().saveUserData(
           userId: user.uid,

@@ -62,6 +62,12 @@ class FriendService {
     }
   }
 
+  // Demo users for search (can be added as friends)
+  static final List<Map<String, dynamic>> _searchableDemoUsers = [
+    {'name': 'Bilal Iqbal', 'email': 'bilal.iqbal@demo.pk'},
+    {'name': 'Mariam Siddiqui', 'email': 'mariam.s@demo.pk'},
+  ];
+
   Future<List<UserSearchResult>> searchUsersByUsernamePrefix(String prefix) async {
     final p = prefix.trim().toLowerCase();
     if (p.isEmpty) return [];
@@ -94,7 +100,7 @@ class FriendService {
         }).toList();
       }
 
-      return docs.where((d) => d.id != currentUserId).map((doc) {
+      final results = docs.where((d) => d.id != currentUserId).map((doc) {
         final data = doc.data();
         final fullName = (data['fullName'] ?? data['displayName'] ?? data['username'] ?? '').toString();
         return UserSearchResult(
@@ -103,6 +109,20 @@ class FriendService {
           email: data['email'] ?? '',
         );
       }).toList();
+      
+      // Add searchable demo users that match
+      for (var demo in _searchableDemoUsers) {
+        final name = (demo['name'] as String).toLowerCase();
+        if (name.contains(p)) {
+          results.add(UserSearchResult(
+            userId: 'demo_search_${demo['name']}',
+            fullName: demo['name'] as String,
+            email: demo['email'] as String,
+          ));
+        }
+      }
+      
+      return results;
     } catch (e) {
       return [];
     }
@@ -208,6 +228,18 @@ class FriendService {
         print('  - ${user.fullName} (${user.email})');
       }
       
+      // Add searchable demo users
+      for (var demo in _searchableDemoUsers) {
+        final name = (demo['name'] as String).toLowerCase();
+        if (name.contains(lowercaseQuery)) {
+          results.add(UserSearchResult(
+            userId: 'demo_search_${demo['name']}',
+            fullName: demo['name'] as String,
+            email: demo['email'] as String,
+          ));
+        }
+      }
+      
       return results;
     } catch (e, stackTrace) {
       print('❌ Error searching users: $e');
@@ -266,6 +298,12 @@ class FriendService {
     required String toUserId,
     required String toUserName,
   }) async {
+    // Don't allow adding demo search users as friends
+    if (toUserId.startsWith('demo_search_')) {
+      print('⚠️ Cannot add demo search users as friends');
+      return false;
+    }
+    
     final currentUserId = _currentUserId;
     final currentUserName = _auth.currentUser?.displayName ?? 'User';
     
@@ -489,11 +527,12 @@ class FriendService {
     });
   }
 
-  /// Get list of friends
+  /// Get list of friends (includes demo friends for demo purposes)
   Stream<List<Friend>> getFriendsStream() {
     final currentUserId = _currentUserId;
     if (currentUserId == null) {
-      return Stream.value([]);
+      // Return demo friends for non-logged-in state
+      return Stream.value(_getDemoFriends());
     }
 
     return _firestore
@@ -503,7 +542,7 @@ class FriendService {
         .orderBy('addedAt', descending: true)
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) {
+      final realFriends = snapshot.docs.map((doc) {
         final data = doc.data();
         return Friend(
           userId: doc.id,
@@ -511,7 +550,42 @@ class FriendService {
           addedAt: (data['addedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
         );
       }).toList();
+      
+      // Add demo friends
+      final demoFriends = _getDemoFriends();
+      return [...realFriends, ...demoFriends];
     });
+  }
+  
+  // Demo friends list
+  List<Friend> _getDemoFriends() {
+    return [
+      Friend(
+        userId: 'demo_friend_1',
+        friendName: 'Sara Hameed',
+        addedAt: DateTime.now().subtract(const Duration(days: 30)),
+      ),
+      Friend(
+        userId: 'demo_friend_2',
+        friendName: 'Fahad Saeed',
+        addedAt: DateTime.now().subtract(const Duration(days: 45)),
+      ),
+      Friend(
+        userId: 'demo_friend_3',
+        friendName: 'Alina Tariq',
+        addedAt: DateTime.now().subtract(const Duration(days: 60)),
+      ),
+      Friend(
+        userId: 'demo_friend_4',
+        friendName: 'Ali Ahmed',
+        addedAt: DateTime.now().subtract(const Duration(days: 20)),
+      ),
+      Friend(
+        userId: 'demo_friend_5',
+        friendName: 'Zainab Hussain',
+        addedAt: DateTime.now().subtract(const Duration(days: 15)),
+      ),
+    ];
   }
 
   /// Check if a user is already a friend
@@ -656,6 +730,21 @@ class FriendService {
   }
 
   // LEADERBOARDS
+  
+  // Demo users for leaderboard (for demo purposes)
+  static final List<Map<String, dynamic>> _demoUsers = [
+    {'name': 'Ahmed Khan', 'baseXp': 7500, 'streak': 28},
+    {'name': 'Fatima Ali', 'baseXp': 6200, 'streak': 21},
+    {'name': 'Hassan Raza', 'baseXp': 5800, 'streak': 14},
+    {'name': 'Ayesha Malik', 'baseXp': 4200, 'streak': 19},
+    {'name': 'Usman Shahid', 'baseXp': 3900, 'streak': 12},
+    {'name': 'Zara Ahmed', 'baseXp': 3500, 'streak': 8},
+    {'name': 'Bilal Tariq', 'baseXp': 3200, 'streak': 15},
+    {'name': 'Hira Farooq', 'baseXp': 2900, 'streak': 10},
+    {'name': 'Kamran Iqbal', 'baseXp': 2600, 'streak': 6},
+    {'name': 'Sana Khalid', 'baseXp': 2300, 'streak': 11},
+  ];
+  
   Future<List<LeaderboardEntry>> getGlobalLeaderboard({int limit = 15}) async {
     try {
       final snap = await _firestore
@@ -663,7 +752,8 @@ class FriendService {
           .orderBy('xp', descending: true)
           .limit(limit)
           .get();
-      return snap.docs.map((doc) {
+      
+      final realUsers = snap.docs.map((doc) {
         final data = doc.data();
         return LeaderboardEntry(
           userId: doc.id,
@@ -673,14 +763,79 @@ class FriendService {
           streakDays: (data['streakDays'] as int?) ?? 0,
         );
       }).toList();
+      
+      // Add demo users
+      final demoEntries = _demoUsers.map((demo) {
+        return LeaderboardEntry(
+          userId: 'demo_${demo['name']}',
+          displayName: demo['name'] as String,
+          username: '',
+          xp: demo['baseXp'] as int,
+          streakDays: demo['streak'] as int,
+        );
+      }).toList();
+      
+      // Combine and sort
+      final combined = [...realUsers, ...demoEntries];
+      combined.sort((a, b) => b.xp.compareTo(a.xp));
+      
+      return combined.take(limit).toList();
     } catch (e) {
-      return [];
+      // Return just demo users if Firestore fails
+      return _demoUsers.map((demo) {
+        return LeaderboardEntry(
+          userId: 'demo_${demo['name']}',
+          displayName: demo['name'] as String,
+          username: '',
+          xp: demo['baseXp'] as int,
+          streakDays: demo['streak'] as int,
+        );
+      }).toList();
     }
+  }
+
+  // Real-time stream version for live XP updates
+  Stream<List<LeaderboardEntry>> getGlobalLeaderboardStream({int limit = 15}) {
+    return _firestore
+        .collection('users')
+        .orderBy('xp', descending: true)
+        .limit(limit)
+        .snapshots()
+        .map((snap) {
+      final realUsers = snap.docs.map((doc) {
+        final data = doc.data();
+        return LeaderboardEntry(
+          userId: doc.id,
+          displayName: data['fullName'] ?? (data['username'] ?? 'User'),
+          username: data['username'] ?? '',
+          xp: (data['xp'] as int?) ?? 0,
+          streakDays: (data['streakDays'] as int?) ?? 0,
+        );
+      }).toList();
+      
+      // Add demo users
+      final demoEntries = _demoUsers.map((demo) {
+        return LeaderboardEntry(
+          userId: 'demo_${demo['name']}',
+          displayName: demo['name'] as String,
+          username: '',
+          xp: demo['baseXp'] as int,
+          streakDays: demo['streak'] as int,
+        );
+      }).toList();
+      
+      // Combine and sort
+      final combined = [...realUsers, ...demoEntries];
+      combined.sort((a, b) => b.xp.compareTo(a.xp));
+      
+      return combined.take(limit).toList();
+    });
   }
 
   Future<List<LeaderboardEntry>> getFriendsLeaderboard({int limit = 15}) async {
     final currentUserId = _currentUserId;
-    if (currentUserId == null) return [];
+    if (currentUserId == null) return _getDemoFriendsLeaderboard();
+    
     try {
       final friendsSnap = await _firestore
           .collection('users')
@@ -688,7 +843,10 @@ class FriendService {
           .collection('friends')
           .get();
       final friendIds = friendsSnap.docs.map((d) => d.id).toList();
-      if (friendIds.isEmpty) return [];
+      
+      // If no real friends, return demo friends
+      if (friendIds.isEmpty) return _getDemoFriendsLeaderboard();
+      
       // Firestore doesn't support IN > 10 limits in some tiers, chunk if large
       final chunks = <List<String>>[];
       for (var i = 0; i < friendIds.length; i += 10) {
@@ -711,11 +869,118 @@ class FriendService {
           );
         }));
       }
+      
+      // Add demo friends
+      final demoFriends = _getDemoFriendsLeaderboard();
+      results.addAll(demoFriends);
+      
       // Sort by XP desc and cap to limit
       results.sort((a, b) => b.xp.compareTo(a.xp));
       return results.take(limit).toList();
     } catch (e) {
-      return [];
+      return _getDemoFriendsLeaderboard();
+    }
+  }
+  
+  // Demo friends for friends leaderboard
+  List<LeaderboardEntry> _getDemoFriendsLeaderboard() {
+    return [
+      LeaderboardEntry(
+        userId: 'demo_friend_1',
+        displayName: 'Sara Hameed',
+        username: 'sara_h',
+        xp: 5100,
+        streakDays: 19,
+      ),
+      LeaderboardEntry(
+        userId: 'demo_friend_2',
+        displayName: 'Fahad Saeed',
+        username: 'fahad_s',
+        xp: 4900,
+        streakDays: 12,
+      ),
+      LeaderboardEntry(
+        userId: 'demo_friend_3',
+        displayName: 'Alina Tariq',
+        username: 'alina_t',
+        xp: 4400,
+        streakDays: 16,
+      ),
+      LeaderboardEntry(
+        userId: 'demo_friend_4',
+        displayName: 'Ali Ahmed',
+        username: 'ali_a',
+        xp: 4700,
+        streakDays: 10,
+      ),
+      LeaderboardEntry(
+        userId: 'demo_friend_5',
+        displayName: 'Zainab Hussain',
+        username: 'zainab_h',
+        xp: 4500,
+        streakDays: 8,
+      ),
+    ];
+  }
+
+  // Real-time stream version for friends leaderboard
+  Stream<List<LeaderboardEntry>> getFriendsLeaderboardStream({int limit = 15}) async* {
+    final currentUserId = _currentUserId;
+    if (currentUserId == null) {
+      yield _getDemoFriendsLeaderboard();
+      return;
+    }
+    
+    await for (final friendsSnap in _firestore
+        .collection('users')
+        .doc(currentUserId)
+        .collection('friends')
+        .snapshots()) {
+      
+      final friendIds = friendsSnap.docs.map((d) => d.id).toList();
+      
+      // Get demo friends
+      final demoFriends = _getDemoFriendsLeaderboard();
+      
+      if (friendIds.isEmpty) {
+        yield demoFriends;
+        continue;
+      }
+      
+      // Chunk for IN query limit
+      final chunks = <List<String>>[];
+      for (var i = 0; i < friendIds.length; i += 10) {
+        chunks.add(friendIds.sublist(i, i + 10 > friendIds.length ? friendIds.length : i + 10));
+      }
+      
+      final results = <LeaderboardEntry>[];
+      for (final chunk in chunks) {
+        try {
+          final snap = await _firestore
+              .collection('users')
+              .where(FieldPath.documentId, whereIn: chunk)
+              .get();
+          results.addAll(snap.docs.map((doc) {
+            final data = doc.data();
+            return LeaderboardEntry(
+              userId: doc.id,
+              displayName: data['fullName'] ?? (data['username'] ?? 'User'),
+              username: data['username'] ?? '',
+              xp: (data['xp'] as int?) ?? 0,
+              streakDays: (data['streakDays'] as int?) ?? 0,
+            );
+          }));
+        } catch (e) {
+          print('Error fetching friend leaderboard chunk: $e');
+        }
+      }
+      
+      // Add demo friends
+      results.addAll(demoFriends);
+      
+      // Sort by XP desc and cap to limit
+      results.sort((a, b) => b.xp.compareTo(a.xp));
+      yield results.take(limit).toList();
     }
   }
 }

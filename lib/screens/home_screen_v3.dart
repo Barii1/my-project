@@ -22,6 +22,7 @@ import '../widgets/offline_indicator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart' show FirebaseAuth;
 import '../services/usage_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class HomeScreenV3 extends StatefulWidget {
   const HomeScreenV3({super.key});
@@ -158,52 +159,27 @@ class _HomeScreenV3State extends State<HomeScreenV3> with WidgetsBindingObserver
   }
 
   Future<void> _updateDailyStreak() async {
-    final prefs = await SharedPreferences.getInstance();
-    final today = DateTime.now();
-    final dateKey = '${today.year}-${today.month}-${today.day}';
-    final lastLogin = prefs.getString('last_login_date');
-    int streak = prefs.getInt('streak_count') ?? 0;
+    // Get streak from Firestore instead of SharedPreferences
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return;
 
-    if (lastLogin == null) {
-      // First login
-      await prefs.setString('last_login_date', dateKey);
-      await prefs.setInt('streak_count', 1);
-      setState(() => _streak = 1);
-      return;
-    }
+    try {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(userId)
+          .get();
 
-    if (lastLogin == dateKey) {
-      // Already counted today
-      setState(() => _streak = streak);
-      return;
-    }
-
-    // Compute if last login was yesterday
-    final parts = lastLogin.split('-');
-    if (parts.length == 3) {
-      final y = int.tryParse(parts[0]);
-      final m = int.tryParse(parts[1]);
-      final d = int.tryParse(parts[2]);
-      if (y != null && m != null && d != null) {
-        final diff = today.difference(DateTime(y, m, d)).inDays;
-        if (diff == 1) {
-          // Consecutive day
-          streak += 1;
-        } else {
-          // Missed at least one day
-          streak = 1; // Start fresh at 1 for today
-        }
+      if (userDoc.exists) {
+        final data = userDoc.data();
+        final streakDays = data?['streakDays'] ?? 0;
+        setState(() => _streak = streakDays);
       } else {
-        // Malformed stored date, reset
-        streak = 1;
+        setState(() => _streak = 0);
       }
-    } else {
-      streak = 1;
+    } catch (e) {
+      // Fallback to 0 on error
+      setState(() => _streak = 0);
     }
-
-    await prefs.setString('last_login_date', dateKey);
-    await prefs.setInt('streak_count', streak);
-    setState(() => _streak = streak);
   }
 
   void _onItemTapped(int index) {

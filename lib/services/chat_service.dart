@@ -74,6 +74,15 @@ class ChatService {
     required String currentUserName,
     required String friendName,
   }) {
+    // Check if this is a demo friend
+    if (friendName == 'Sara Hameed' || 
+        friendName == 'Fahad Saeed' || 
+        friendName == 'Alina Tariq' ||
+        friendName == 'Ali Ahmed' ||
+        friendName == 'Zainab Hussain') {
+      return Stream.value(_getDemoMessages(friendName));
+    }
+    
     final chatId = _generateChatId(currentUserName, friendName);
 
     return _firestore
@@ -94,6 +103,65 @@ class ChatService {
         );
       }).toList();
     });
+  }
+  
+  // Demo messages for demo friends
+  List<ChatMessage> _getDemoMessages(String friendName) {
+    final now = DateTime.now();
+    
+    if (friendName == 'Sara Hameed') {
+      return [
+        ChatMessage(
+          id: 'demo1',
+          sender: 'Sara Hameed',
+          text: 'Hey! Want to study together for the CS quiz?',
+          timestamp: now.subtract(const Duration(hours: 2)),
+          read: false,
+        ),
+      ];
+    } else if (friendName == 'Fahad Saeed') {
+      return [
+        ChatMessage(
+          id: 'demo2',
+          sender: 'Fahad Saeed',
+          text: 'Did you complete today\'s quiz yet?',
+          timestamp: now.subtract(const Duration(hours: 5)),
+          read: false,
+        ),
+      ];
+    } else if (friendName == 'Alina Tariq') {
+      return [
+        ChatMessage(
+          id: 'demo3',
+          sender: 'Alina Tariq',
+          text: 'Can you help me with the Biology questions?',
+          timestamp: now.subtract(const Duration(hours: 3)),
+          read: false,
+        ),
+      ];
+    } else if (friendName == 'Ali Ahmed') {
+      return [
+        ChatMessage(
+          id: 'demo4',
+          sender: 'Ali Ahmed',
+          text: 'Let\'s compete on the leaderboard this week',
+          timestamp: now.subtract(const Duration(hours: 6)),
+          read: false,
+        ),
+      ];
+    } else if (friendName == 'Zainab Hussain') {
+      return [
+        ChatMessage(
+          id: 'demo5',
+          sender: 'Zainab Hussain',
+          text: 'Are you free to study Pakistan Studies together?',
+          timestamp: now.subtract(const Duration(hours: 4)),
+          read: false,
+        ),
+      ];
+    }
+    
+    return [];
   }
 
   /// Mark messages as read

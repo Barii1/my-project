@@ -83,23 +83,7 @@ class MyApp extends StatelessWidget {
     return MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => ConnectivityService()),
-        ChangeNotifierProxyProvider<ConnectivityService, MyAuth.AuthProvider>(
-          create: (context) {
-            final auth = MyAuth.AuthProvider();
-            final connectivity = context.read<ConnectivityService>();
-            auth.setConnectivityService(connectivity);
-            return auth;
-          },
-          update: (context, connectivity, previous) {
-            if (previous != null) {
-              previous.setConnectivityService(connectivity);
-              return previous;
-            }
-            final auth = MyAuth.AuthProvider();
-            auth.setConnectivityService(connectivity);
-            return auth;
-          },
-        ),
+        ChangeNotifierProvider(create: (_) => MyAuth.AuthProvider()),
         ChangeNotifierProvider(create: (_) => StatsProvider()),
         ChangeNotifierProvider(create: (_) => ThemeProvider(prefs)),
         ChangeNotifierProvider(create: (_) {

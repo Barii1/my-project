@@ -210,6 +210,22 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
     }
   }
 
+  Future<void> _takePhoto() async {
+    try {
+      final picker = ImagePicker();
+      final image = await picker.pickImage(source: ImageSource.camera);
+      if (image != null) {
+        setState(() => _pendingImage = image);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to take photo: $e')),
+        );
+      }
+    }
+  }
+
   Future<void> _pickPdf() async {
     try {
       final result = await FilePicker.platform.pickFiles(
@@ -485,6 +501,14 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
+                                ListTile(
+                                  leading: const Icon(Icons.camera_alt, color: Color(0xFF4DB8A8)),
+                                  title: const Text('Take Photo'),
+                                  onTap: () {
+                                    Navigator.pop(ctx);
+                                    _takePhoto();
+                                  },
+                                ),
                                 ListTile(
                                   leading: const Icon(Icons.image, color: Color(0xFF4DB8A8)),
                                   title: const Text('Upload Image'),

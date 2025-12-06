@@ -5,6 +5,7 @@ import '../providers/auth_provider.dart';
 import '../services/friend_service.dart';
 import 'add_friend_screen.dart';
 import 'friend_chat_screen.dart';
+import 'demo_friend_profile_screen.dart';
 
 class FriendsScreen extends StatelessWidget {
   const FriendsScreen({super.key});
@@ -333,17 +334,31 @@ class FriendsScreen extends StatelessWidget {
           if (!isCurrentUser) ...[
             const SizedBox(width: 8),
             IconButton(
-              icon: const Icon(Icons.chat_bubble_outline),
+              icon: const Icon(Icons.person),
               onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => FriendChatScreen(
-                      friendName: name,
-                      currentUserName: currentUserName,
+                // Check if this is a demo friend
+                if (name == 'Sara Hameed' || name == 'Fahad Saeed' || name == 'Alina Tariq' ||
+                    name == 'Ali Ahmed' || name == 'Zainab Hussain') {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => DemoFriendProfileScreen(
+                        friendName: name,
+                        currentUserName: currentUserName,
+                      ),
                     ),
-                  ),
-                );
+                  );
+                } else {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => FriendChatScreen(
+                        friendName: name,
+                        currentUserName: currentUserName,
+                      ),
+                    ),
+                  );
+                }
               },
               color: const Color(0xFF4DB8A8),
               iconSize: 20,

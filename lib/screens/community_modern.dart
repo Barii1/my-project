@@ -24,8 +24,6 @@ class _CommunityModernScreenState extends State<CommunityModernScreen> with Sing
     _startPeriodicUpdates();
   }
   
-  void _initializeLeaderboard() {}
-  
   void _startPeriodicUpdates() {
     // Demo-only updates removed. In non-demo mode, do nothing here.
     _updateTimer?.cancel();
@@ -184,8 +182,8 @@ class _CommunityModernScreenState extends State<CommunityModernScreen> with Sing
     return CustomScrollView(
       slivers: [
         SliverToBoxAdapter(
-          child: FutureBuilder<List<LeaderboardEntry>>(
-            future: service.getGlobalLeaderboard(limit: 15),
+          child: StreamBuilder<List<LeaderboardEntry>>(
+            stream: service.getGlobalLeaderboardStream(limit: 15),
             builder: (context, snapshot) {
               final entries = snapshot.data ?? [];
               if (entries.length < 3) {
@@ -233,17 +231,19 @@ class _CommunityModernScreenState extends State<CommunityModernScreen> with Sing
         ),
         // Top 3 Podium
         // Rest of the list
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(24, 0, 24, 120),
-          sliver: SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) {
-                return FutureBuilder<List<LeaderboardEntry>>(
-                  future: service.getGlobalLeaderboard(limit: 15),
-                  builder: (context, snapshot) {
-                    final entries = snapshot.data ?? [];
-                    if (entries.length <= 3) return const SizedBox.shrink();
-                    final entry = entries[index + 3];
+        StreamBuilder<List<LeaderboardEntry>>(
+          stream: service.getGlobalLeaderboardStream(limit: 15),
+          builder: (context, snapshot) {
+            final entries = snapshot.data ?? [];
+            final remaining = entries.length > 3 ? entries.sublist(3) : <LeaderboardEntry>[];
+            
+            return SliverPadding(
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 120),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                    if (index >= remaining.length) return const SizedBox.shrink();
+                    final entry = remaining[index];
                     final rank = index + 4;
                     final isCurrentUser = entry.displayName == currentUserName;
                     return _buildLeaderboardTile(
@@ -255,11 +255,11 @@ class _CommunityModernScreenState extends State<CommunityModernScreen> with Sing
                       isCurrentUser: isCurrentUser,
                     );
                   },
-                );
-              },
-              childCount: 12,
-            ),
-          ),
+                  childCount: remaining.length,
+                ),
+              ),
+            );
+          },
         ),
       ],
     );
@@ -349,8 +349,8 @@ class _CommunityModernScreenState extends State<CommunityModernScreen> with Sing
     );
 
     // Friends leaderboard + pending requests list
-    return FutureBuilder<List<LeaderboardEntry>>(
-      future: service.getFriendsLeaderboard(limit: 15),
+    return StreamBuilder<List<LeaderboardEntry>>(
+      stream: service.getFriendsLeaderboardStream(limit: 15),
       builder: (context, snapshot) {
         final friendsEntries = snapshot.data ?? [];
         if (friendsEntries.isEmpty) {
