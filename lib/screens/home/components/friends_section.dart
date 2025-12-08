@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../providers/auth_provider.dart' as MyAuth;
+import '../../../services/friend_service.dart';
 import '../../friends_screen.dart';
 import '../../add_friend_screen.dart';
-import '../../demo_friend_profile_screen.dart';
+import '../../friend_chat_screen.dart';
 
 class FriendsSection extends StatefulWidget {
   const FriendsSection({super.key});
@@ -15,7 +15,6 @@ class FriendsSection extends StatefulWidget {
 }
 
 class _FriendsSectionState extends State<FriendsSection> {
-  bool _isNewUser = true;
   bool _isLoading = true;
 
   @override
@@ -24,31 +23,14 @@ class _FriendsSectionState extends State<FriendsSection> {
     _checkIfNewUser();
   }
 
-  Future<void> _checkIfNewUser() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      setState(() => _isLoading = false);
-      return;
-    }
+  @override
+  void dispose() {
+    super.dispose();
+  }
 
-    try {
-      final doc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(user.uid)
-          .get();
-      
-      final data = doc.data();
-      // User is "new" if they have 0 XP or no lastActiveDate
-      final xp = (data?['xp'] as int?) ?? 0;
-      final hasBeenActive = data?['lastActiveDate'] != null;
-      
-      setState(() {
-        _isNewUser = xp == 0 && !hasBeenActive;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() => _isLoading = false);
-    }
+  Future<void> _checkIfNewUser() async {
+    if (!mounted) return;
+    setState(() => _isLoading = false);
   }
 
   @override
@@ -56,15 +38,8 @@ class _FriendsSectionState extends State<FriendsSection> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final authProvider = Provider.of<MyAuth.AuthProvider>(context, listen: false);
     final currentUserName = authProvider.fullName ?? 'User';
-    
-    // Demo friends - only shown to returning users
-    final demoFriends = [
-      {'name': 'Sara Hameed', 'id': 'demo_friend_1'},
-      {'name': 'Fahad Saeed', 'id': 'demo_friend_2'},
-      {'name': 'Alina Tariq', 'id': 'demo_friend_3'},
-      {'name': 'Ali Ahmed', 'id': 'demo_friend_4'},
-      {'name': 'Zainab Hussain', 'id': 'demo_friend_5'},
-    ];
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    final friendService = FriendService();
     
     return Container(
       padding: const EdgeInsets.all(20),
@@ -92,9 +67,15 @@ class _FriendsSectionState extends State<FriendsSection> {
           const SizedBox(height: 12),
           _isLoading
               ? const Center(child: CircularProgressIndicator())
-              : _isNewUser
-                  ? _buildNoFriendsView(isDark)
-                  : _buildFriendsListView(isDark, currentUserName, demoFriends),
+              : StreamBuilder<List<Friend>>(
+                  stream: friendService.getFriendsStream(),
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                      return _buildNoFriendsView(isDark);
+                    }
+                    return _buildFriendsListView(isDark, currentUserName, currentUserId ?? '', snapshot.data!);
+                  },
+                ),
         ],
       ),
     );
@@ -128,16 +109,17 @@ class _FriendsSectionState extends State<FriendsSection> {
   Widget _buildFriendsListView(
     bool isDark,
     String currentUserName,
-    List<Map<String, String>> demoFriends,
+    String currentUserId,
+    List<Friend> friends,
   ) {
     return SizedBox(
       height: 72,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        itemCount: demoFriends.length + 1,
+        itemCount: friends.length + 1,
         separatorBuilder: (_, __) => const SizedBox(width: 12),
         itemBuilder: (context, index) {
-          if (index == demoFriends.length) {
+          if (index == friends.length) {
             return GestureDetector(
               onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddFriendScreen())),
               child: Container(
@@ -151,17 +133,19 @@ class _FriendsSectionState extends State<FriendsSection> {
               ),
             );
           }
-          final friend = demoFriends[index];
-          final firstName = (friend['name'] as String).split(' ').first;
+          final friend = friends[index];
+          final firstName = friend.friendName.split(' ').first;
           
           return GestureDetector(
             onTap: () {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => DemoFriendProfileScreen(
+                  builder: (_) => FriendChatScreen(
+                    friendId: friend.userId,
+                    friendName: friend.friendName,
+                    currentUserId: currentUserId,
                     currentUserName: currentUserName,
-                    friendName: friend['name'] as String,
                   ),
                 ),
               );

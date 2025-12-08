@@ -9,7 +9,7 @@ import '../services/email_pin_service.dart';
 import '../services/friend_service.dart';
 import 'login_screen.dart';
 import 'home_screen_v3.dart';
-import 'package:flutter_figma/lib/Email%20Verification/pin_verify_screen.dart';
+import '../email_verification/pin_verify_screen.dart';
 
 class CreateAccountScreen extends StatelessWidget {
   const CreateAccountScreen({super.key});

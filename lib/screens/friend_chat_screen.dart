@@ -8,12 +8,16 @@ import 'dart:async';
 /// Collection: /chats/{chatId}/messages/{messageId}
 /// Features: Real-time updates, typing indicators, read receipts
 class FriendChatScreen extends StatefulWidget {
+  final String friendId;
   final String friendName;
+  final String currentUserId;
   final String currentUserName;
 
   const FriendChatScreen({
     super.key,
+    required this.friendId,
     required this.friendName,
+    required this.currentUserId,
     required this.currentUserName,
   });
 
@@ -57,7 +61,9 @@ class _FriendChatScreenState extends State<FriendChatScreen> {
     if (hasText && !_isTyping) {
       setState(() => _isTyping = true);
       _chatService.setTypingStatus(
+        currentUserId: widget.currentUserId,
         currentUserName: widget.currentUserName,
+        friendUserId: widget.friendId,
         friendName: widget.friendName,
         isTyping: true,
       );
@@ -69,7 +75,9 @@ class _FriendChatScreenState extends State<FriendChatScreen> {
       if (_isTyping) {
         setState(() => _isTyping = false);
         _chatService.setTypingStatus(
+          currentUserId: widget.currentUserId,
           currentUserName: widget.currentUserName,
+          friendUserId: widget.friendId,
           friendName: widget.friendName,
           isTyping: false,
         );
@@ -80,7 +88,8 @@ class _FriendChatScreenState extends State<FriendChatScreen> {
   void _listenToMessages() {
     _messagesSubscription = _chatService
         .getMessagesStream(
-          currentUserName: widget.currentUserName,
+          currentUserId: widget.currentUserId,
+          friendUserId: widget.friendId,
           friendName: widget.friendName,
         )
         .listen((messages) {
@@ -89,10 +98,10 @@ class _FriendChatScreenState extends State<FriendChatScreen> {
       
       // Mark messages as read
       for (var message in messages) {
-        if (!message.isFromUser(widget.currentUserName) && !message.read) {
+        if (!message.isFromUser(widget.currentUserId) && !message.read) {
           _chatService.markMessagesAsRead(
-            currentUserName: widget.currentUserName,
-            friendName: widget.friendName,
+            currentUserId: widget.currentUserId,
+            friendUserId: widget.friendId,
             messageId: message.id,
           );
         }
@@ -103,8 +112,8 @@ class _FriendChatScreenState extends State<FriendChatScreen> {
   void _listenToTypingStatus() {
     _typingSubscription = _chatService
         .getTypingStatusStream(
-          currentUserName: widget.currentUserName,
-          friendName: widget.friendName,
+          currentUserId: widget.currentUserId,
+          friendUserId: widget.friendId,
         )
         .listen((isTyping) {
       setState(() => _friendIsTyping = isTyping);
@@ -120,14 +129,18 @@ class _FriendChatScreenState extends State<FriendChatScreen> {
 
     // Stop typing indicator
     _chatService.setTypingStatus(
+      currentUserId: widget.currentUserId,
       currentUserName: widget.currentUserName,
+      friendUserId: widget.friendId,
       friendName: widget.friendName,
       isTyping: false,
     );
 
     try {
       await _chatService.sendMessage(
+        currentUserId: widget.currentUserId,
         currentUserName: widget.currentUserName,
+        friendUserId: widget.friendId,
         friendName: widget.friendName,
         messageText: text,
       );

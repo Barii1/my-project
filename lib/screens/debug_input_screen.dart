@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/chat_service.dart';
 
 class DebugInputScreen extends StatelessWidget {
   const DebugInputScreen({super.key});
@@ -6,6 +7,7 @@ class DebugInputScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final controller = TextEditingController();
+    final chatService = ChatService();
     return Scaffold(
       appBar: AppBar(title: const Text('Debug Input')),
       body: Padding(
@@ -26,6 +28,28 @@ class DebugInputScreen extends StatelessWidget {
             ValueListenableBuilder<TextEditingValue>(
               valueListenable: controller,
               builder: (context, value, _) => Text('Current: "${value.text}"'),
+            ),
+            const SizedBox(height: 32),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.sync),
+              label: const Text('Backfill chat metadata (senderId, participantsMap)'),
+              onPressed: () async {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Backfill started...')),
+                );
+                try {
+                  final updated = await chatService.backfillChatMetadata();
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Backfill complete. Updated $updated messages.')),
+                  );
+                } catch (e) {
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Backfill failed: $e')),
+                  );
+                }
+              },
             ),
           ],
         ),

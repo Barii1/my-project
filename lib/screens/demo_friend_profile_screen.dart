@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'friend_chat_screen.dart';
 
 class DemoFriendProfileScreen extends StatelessWidget {
@@ -227,7 +228,9 @@ class DemoFriendProfileScreen extends StatelessWidget {
                           context,
                           MaterialPageRoute(
                             builder: (_) => FriendChatScreen(
+                              friendId: 'demo_${friendName.replaceAll(' ', '_').toLowerCase()}',
                               currentUserName: currentUserName,
+                              currentUserId: FirebaseAuth.instance.currentUser?.uid ?? 'demo_user',
                               friendName: friendName,
                             ),
                           ),

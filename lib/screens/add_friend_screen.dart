@@ -53,17 +53,11 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
       
       // Check friend status for each result
       for (var user in results) {
-        // Skip friend status check for demo users to avoid errors
-        if (user.userId.startsWith('demo_search_')) {
-          _isFriendCache[user.userId] = false;
-          _requestStatusCache[user.userId] = null;
-        } else {
-          final isFriend = await _friendService.isFriend(user.userId);
-          final requestStatus = await _friendService.getRequestStatus(user.userId);
-          
-          _isFriendCache[user.userId] = isFriend;
-          _requestStatusCache[user.userId] = requestStatus;
-        }
+        final isFriend = await _friendService.isFriend(user.userId);
+        final requestStatus = await _friendService.getRequestStatus(user.userId);
+        
+        _isFriendCache[user.userId] = isFriend;
+        _requestStatusCache[user.userId] = requestStatus;
       }
       
       setState(() {
@@ -103,12 +97,15 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
         _requestStatusCache[user.userId] = requestStatus;
       }
       
+      print('🔧 Setting state: ${results.length} results, query: empty, isSearching: false');
       setState(() {
         _searchResults = results;
         _searchController.text = ''; // Clear search box
-        _query = ''; // Keep query empty so results show
+        _query = ''; // Clear query to show "all users" state
         _isSearching = false;
       });
+      
+      print('✅ State updated - _searchResults.length: ${_searchResults.length}, _isSearching: $_isSearching, _query: "$_query"');
       
       if (results.isEmpty && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -116,6 +113,14 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
             content: Text('No users found in database. Create another account to test.'),
             backgroundColor: Color(0xFFF59E0B),
             duration: Duration(seconds: 4),
+          ),
+        );
+      } else if (results.isNotEmpty && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Showing ${results.length} user${results.length == 1 ? '' : 's'} from database'),
+            backgroundColor: const Color(0xFF4DB8A8),
+            duration: const Duration(seconds: 2),
           ),
         );
       }
@@ -180,221 +185,173 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(24),
-            child: Container(
-              decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF16213E) : Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: isDark ? const Color(0xFF2A2E45) : const Color(0xFFE5E7EB),
-                ),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: TextField(
-                controller: _searchController,
-                onChanged: (v) {
-                  setState(() => _query = v.trim());
-                  _performSearch(v.trim());
-                },
-                style: TextStyle(
-                  color: isDark ? Colors.white : const Color(0xFF34495E),
-                ),
-                decoration: InputDecoration(
-                    hintText: 'Search by username or name...',
-                  hintStyle: TextStyle(
-                    color: isDark ? Colors.white38 : const Color(0xFF9CA3AF),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 600),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: isDark ? const Color(0xFF16213E) : Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: isDark ? const Color(0xFF2A2E45) : const Color(0xFFE5E7EB),
+                      ),
+                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: (v) {
+                        setState(() => _query = v.trim());
+                        _performSearch(v.trim());
+                      },
+                      style: TextStyle(
+                        color: isDark ? Colors.white : const Color(0xFF34495E),
+                      ),
+                      decoration: InputDecoration(
+                        hintText: 'Search by username or name...',
+                        hintStyle: TextStyle(
+                          color: isDark ? Colors.white38 : const Color(0xFF9CA3AF),
+                        ),
+                        prefixIcon: Icon(Icons.search, color: isDark ? Colors.white54 : const Color(0xFF9CA3AF)),
+                        border: InputBorder.none,
+                      ),
+                    ),
                   ),
-                  prefixIcon: Icon(Icons.search, color: isDark ? Colors.white54 : const Color(0xFF9CA3AF)),
-                  border: InputBorder.none,
                 ),
               ),
             ),
-          ),
-          Expanded(
-            child: _isSearching
-                ? const Center(child: CircularProgressIndicator(color: Color(0xFF4DB8A8)))
-                : _searchResults.isEmpty && _query.isEmpty
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.person_search,
-                              size: 80,
-                              color: isDark ? Colors.white24 : Colors.black26,
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'Search for users',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                                color: isDark ? Colors.white54 : const Color(0xFF64748B),
+            Expanded(
+              child: Builder(
+                builder: (context) {
+                  print('🎨 Building Expanded child - isSearching: $_isSearching, results: ${_searchResults.length}, query: "$_query"');
+                  
+                  if (_isSearching) {
+                    return const Center(child: CircularProgressIndicator(color: Color(0xFF4DB8A8)));
+                  }
+                  
+                  if (_searchResults.isNotEmpty) {
+                    print('📋 Building ListView with ${_searchResults.length} items');
+                    return LayoutBuilder(
+                      builder: (context, constraints) {
+                        return ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 24),
+                          itemCount: _searchResults.length,
+                          itemBuilder: (context, i) {
+                        final user = _searchResults[i];
+                        print('  🏗️ Building item $i: ${user.fullName}');
+                        final isFriend = _isFriendCache[user.userId] ?? false;
+                        final requestStatus = _requestStatusCache[user.userId];
+                            
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: isDark ? const Color(0xFF16213E) : Colors.white,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: isDark ? const Color(0xFF2A2E45) : const Color(0xFFE5E7EB),
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Type a name to find friends',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: isDark ? Colors.white38 : const Color(0xFF94A3B8),
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'Or tap the list icon above to see all users',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: isDark ? Colors.white38 : const Color(0xFF94A3B8),
-                              ),
-                            ),
-                          ],
-                        ),
-                      )
-                    : _searchResults.isEmpty
-                        ? Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.search_off,
-                                  size: 80,
-                                  color: isDark ? Colors.white24 : Colors.black26,
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  'No users found',
-                                  style: TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w600,
-                                    color: isDark ? Colors.white54 : const Color(0xFF64748B),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 40,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      gradient: const LinearGradient(
+                                        colors: [Color(0xFF4DB8A8), Color(0xFF3DA89A)],
+                                      ),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Center(
+                                      child: Text(
+                                        user.fullName.isNotEmpty 
+                                            ? user.fullName.substring(0, 1).toUpperCase()
+                                            : '?',
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Try a different search',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: isDark ? Colors.white38 : const Color(0xFF94A3B8),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          user.fullName,
+                                          style: TextStyle(
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w600,
+                                            color: isDark ? Colors.white : const Color(0xFF34495E),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          user.email,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: isDark ? Colors.white54 : const Color(0xFF94A3B8),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          )
-                        : ListView.builder(
-                            padding: const EdgeInsets.symmetric(horizontal: 24),
-                            itemCount: _searchResults.length,
-                            itemBuilder: (context, i) {
-                              final user = _searchResults[i];
-                              final isFriend = _isFriendCache[user.userId] ?? false;
-                              final requestStatus = _requestStatusCache[user.userId];
-                              final isDemoUser = user.userId.startsWith('demo_search_');
-                              
-                              return Container(
-                                margin: const EdgeInsets.only(bottom: 12),
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: isDark ? const Color(0xFF16213E) : Colors.white,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                    color: isDark ? const Color(0xFF2A2E45) : const Color(0xFFE5E7EB),
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
+                                  const SizedBox(width: 8),
+                                  if (isFriend)
                                     Container(
-                                      width: 40,
-                                      height: 40,
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                       decoration: BoxDecoration(
-                                        gradient: const LinearGradient(
-                                          colors: [Color(0xFF4DB8A8), Color(0xFF3DA89A)],
-                                        ),
-                                        shape: BoxShape.circle,
+                                        color: const Color(0xFF4DB8A8).withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(12),
                                       ),
-                                      child: Center(
-                                        child: Text(
-                                          user.fullName.isNotEmpty 
-                                              ? user.fullName.substring(0, 1).toUpperCase()
-                                              : '?',
-                                          style: const TextStyle(
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.white,
-                                          ),
+                                      child: const Text(
+                                        'Friend',
+                                        style: TextStyle(
+                                          color: Color(0xFF4DB8A8),
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
                                         ),
                                       ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            user.fullName,
-                                            style: TextStyle(
-                                              fontSize: 15,
-                                              fontWeight: FontWeight.w600,
-                                              color: isDark ? Colors.white : const Color(0xFF34495E),
-                                            ),
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            user.email,
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: isDark ? Colors.white54 : const Color(0xFF94A3B8),
-                                            ),
-                                          ),
-                                        ],
+                                    )
+                                  else if (requestStatus == 'pending')
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF59E0B).withOpacity(0.1),
+                                        borderRadius: BorderRadius.circular(12),
                                       ),
-                                    ),
-                                    if (isFriend)
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFF4DB8A8).withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(12),
+                                      child: const Text(
+                                        'Requested',
+                                        style: TextStyle(
+                                          color: Color(0xFFF59E0B),
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
                                         ),
-                                        child: const Text(
-                                          'Friend',
-                                          style: TextStyle(
-                                            color: Color(0xFF4DB8A8),
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      )
-                                    else if (requestStatus == 'pending')
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFF59E0B).withOpacity(0.1),
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        child: const Text(
-                                          'Requested',
-                                          style: TextStyle(
-                                            color: Color(0xFFF59E0B),
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                          ),
-                                        ),
-                                      )
+                                      ),
+                                    )
                                     else
-                                      ElevatedButton(
-                                        onPressed: isDemoUser 
-                                            ? () {
-                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                  const SnackBar(
-                                                    content: Text('This is a demo user for testing'),
-                                                    backgroundColor: Color(0xFF3DA89A),
-                                                  ),
-                                                );
-                                              }
-                                            : () => _sendFriendRequest(user),
+                                      Flexible(
+                                        child: ElevatedButton(
+                                          onPressed: () {
+                                            if (user.userId.isEmpty) {
+                                              ScaffoldMessenger.of(context).showSnackBar(
+                                                const SnackBar(
+                                                  content: Text('Invalid user id for this account'),
+                                                  backgroundColor: Colors.red,
+                                                ),
+                                              );
+                                              return;
+                                            }
+                                            _sendFriendRequest(user);
+                                          },
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: const Color(0xFF4DB8A8),
                                           foregroundColor: Colors.white,
@@ -411,13 +368,92 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
                                           ),
                                         ),
                                       ),
-                                  ],
+                                    ),
+                                ],
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    );
+                  }
+                  
+                  if (_query.isEmpty) {
+                    print('📭 Showing empty state (no query)');
+                    return Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(
+                                  Icons.person_search,
+                                  size: 80,
+                                  color: isDark ? Colors.white24 : Colors.black26,
                                 ),
-                              );
-                            },
+                                const SizedBox(height: 16),
+                                Text(
+                                  'Search for users',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                    color: isDark ? Colors.white54 : const Color(0xFF64748B),
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Type a name to find friends',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: isDark ? Colors.white38 : const Color(0xFF94A3B8),
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'Or tap the list icon above to see all users',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: isDark ? Colors.white38 : const Color(0xFF94A3B8),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                  }
+                  
+                  print('❌ Showing no results state');
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.search_off,
+                          size: 80,
+                          color: isDark ? Colors.white24 : Colors.black26,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No users found',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? Colors.white54 : const Color(0xFF64748B),
                           ),
-          ),
-        ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Try a different search',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: isDark ? Colors.white38 : const Color(0xFF94A3B8),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

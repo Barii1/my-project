@@ -172,12 +172,15 @@ class _HomeScreenV3State extends State<HomeScreenV3> with WidgetsBindingObserver
       if (userDoc.exists) {
         final data = userDoc.data();
         final streakDays = data?['streakDays'] ?? 0;
+        if (!mounted) return;
         setState(() => _streak = streakDays);
       } else {
+        if (!mounted) return;
         setState(() => _streak = 0);
       }
     } catch (e) {
       // Fallback to 0 on error
+      if (!mounted) return;
       setState(() => _streak = 0);
     }
   }

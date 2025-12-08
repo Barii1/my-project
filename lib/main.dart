@@ -41,7 +41,7 @@ import 'chatbot.dart';
 import 'services/offline_storage_service.dart';
 import 'services/chat_history_service.dart';
 import 'services/connectivity_service.dart';
-import 'lib/Email Verification/pin_screen.dart' as ev;
+import 'email_verification/pin_screen.dart' as ev;
 import 'screens/debug_input_screen.dart';
 // import 'package:firebase_messaging/firebase_messaging.dart';
 // import 'services/notification_service.dart';

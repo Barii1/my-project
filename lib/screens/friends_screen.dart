@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
 import '../providers/stats_provider.dart';
-import '../providers/auth_provider.dart';
+import '../providers/auth_provider.dart' as app_auth;
 import '../services/friend_service.dart';
 import 'add_friend_screen.dart';
 import 'friend_chat_screen.dart';
-import 'demo_friend_profile_screen.dart';
 
 class FriendsScreen extends StatelessWidget {
   const FriendsScreen({super.key});
@@ -20,9 +20,10 @@ class FriendsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final auth = Provider.of<AuthProvider>(context);
+    final auth = Provider.of<app_auth.AuthProvider>(context);
     final stats = Provider.of<StatsProvider>(context);
     final currentUserName = auth.fullName ?? 'You';
+    final currentUserId = fb_auth.FirebaseAuth.instance.currentUser?.uid ?? '';
     final friendService = FriendService();
     
     return Scaffold(
@@ -157,70 +158,78 @@ class FriendsScreen extends StatelessWidget {
                   ),
                 );
               }
-
-              final friends = snapshot.data!;
               
-              // Create leaderboard with current user + friends
-              final friendsUsersRaw = [
-                {
-                  'name': currentUserName,
-                  'points': stats.totalXp,
-                  'streak': stats.streakDays,
-                  'isCurrentUser': true,
-                  'userId': null,
-                },
-              ];
-              
-              // Add friend stats (mock for now - in production, fetch from Firestore)
-              for (var friend in friends) {
-                friendsUsersRaw.add({
-                  'name': friend.friendName,
-                  'points': 5000 + (friend.friendName.hashCode % 5000),
-                  'streak': 7 + (friend.friendName.hashCode % 20),
-                  'isCurrentUser': false,
-                  'userId': friend.userId,
-                });
-              }
-              
-              // Sort by points
-              friendsUsersRaw.sort((a, b) => 
-                  (b['points'] as int).compareTo(a['points'] as int));
-
-              return SliverList(
-                delegate: SliverChildListDelegate([
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
-                    child: Text(
-                      'Friends Leaderboard',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : const Color(0xFF34495E),
+              return FutureBuilder<List<LeaderboardEntry>>(
+                future: friendService.getFriendsLeaderboard(),
+                builder: (context, leaderboardSnapshot) {
+                  if (leaderboardSnapshot.connectionState == ConnectionState.waiting) {
+                    return const SliverToBoxAdapter(
+                      child: Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(24.0),
+                          child: CircularProgressIndicator(color: Color(0xFF4DB8A8)),
+                        ),
                       ),
-                    ),
-                  ),
-                  ...friendsUsersRaw.asMap().entries.map((entry) {
-                    final index = entry.key;
-                    final user = entry.value;
-                    final rank = index + 1;
-                    final isCurrentUser = user['isCurrentUser'] as bool;
-                    final name = user['name'] as String;
-                    final points = _formatPoints(user['points'] as int);
-                    final streak = user['streak'] as int;
-
-                    return _buildLeaderboardTile(
-                      context: context,
-                      rank: rank,
-                      name: name,
-                      points: points,
-                      streak: streak,
-                      isDark: isDark,
-                      isCurrentUser: isCurrentUser,
-                      showMedal: rank <= 3,
-                      currentUserName: currentUserName,
                     );
-                  }),
-                ]),
+                  }
+                  
+                  final leaderboardEntries = leaderboardSnapshot.data ?? [];
+                  
+                  // Add current user to leaderboard
+                  final allEntries = [
+                    LeaderboardEntry(
+                      userId: currentUserId,
+                      displayName: currentUserName,
+                      username: '',
+                      xp: stats.totalXp,
+                      streakDays: stats.streakDays,
+                    ),
+                    ...leaderboardEntries,
+                  ];
+                  
+                  // Sort by XP desc
+                  allEntries.sort((a, b) => b.xp.compareTo(a.xp));
+
+                  return SliverList(
+                    delegate: SliverChildListDelegate([
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
+                        child: Text(
+                          'Friends Leaderboard',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white : const Color(0xFF34495E),
+                          ),
+                        ),
+                      ),
+                      ...allEntries.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final user = entry.value;
+                        final rank = index + 1;
+                        final isCurrentUser = user.userId == currentUserId;
+                        final name = user.displayName;
+                        final userId = isCurrentUser ? null : user.userId;
+                        final points = _formatPoints(user.xp);
+                        final streak = user.streakDays;
+
+                        return _buildLeaderboardTile(
+                          context: context,
+                          rank: rank,
+                          name: name,
+                          points: points,
+                          streak: streak,
+                          isDark: isDark,
+                          isCurrentUser: isCurrentUser,
+                          showMedal: rank <= 3,
+                          currentUserName: currentUserName,
+                          currentUserId: currentUserId,
+                          friendUserId: userId,
+                        );
+                      }),
+                    ]),
+                  );
+                },
               );
             },
           ),
@@ -238,6 +247,8 @@ class FriendsScreen extends StatelessWidget {
     required bool isDark,
     required bool isCurrentUser,
     required String currentUserName,
+    required String currentUserId,
+    String? friendUserId,
     bool showMedal = false,
   }) {
     Color getMedalColor() {
@@ -336,29 +347,23 @@ class FriendsScreen extends StatelessWidget {
             IconButton(
               icon: const Icon(Icons.person),
               onPressed: () {
-                // Check if this is a demo friend
-                if (name == 'Sara Hameed' || name == 'Fahad Saeed' || name == 'Alina Tariq' ||
-                    name == 'Ali Ahmed' || name == 'Zainab Hussain') {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => DemoFriendProfileScreen(
-                        friendName: name,
-                        currentUserName: currentUserName,
-                      ),
-                    ),
+                if (friendUserId == null || friendUserId.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Unable to open chat for this user')),
                   );
-                } else {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => FriendChatScreen(
-                        friendName: name,
-                        currentUserName: currentUserName,
-                      ),
-                    ),
-                  );
+                  return;
                 }
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => FriendChatScreen(
+                      friendId: friendUserId,
+                      friendName: name,
+                      currentUserId: currentUserId,
+                      currentUserName: currentUserName,
+                    ),
+                  ),
+                );
               },
               color: const Color(0xFF4DB8A8),
               iconSize: 20,
