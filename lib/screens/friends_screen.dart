@@ -159,8 +159,8 @@ class FriendsScreen extends StatelessWidget {
                 );
               }
               
-              return FutureBuilder<List<LeaderboardEntry>>(
-                future: friendService.getFriendsLeaderboard(),
+              return StreamBuilder<List<LeaderboardEntry>>(
+                stream: friendService.getFriendsLeaderboardStream(),
                 builder: (context, leaderboardSnapshot) {
                   if (leaderboardSnapshot.connectionState == ConnectionState.waiting) {
                     return const SliverToBoxAdapter(
@@ -347,7 +347,13 @@ class FriendsScreen extends StatelessWidget {
             IconButton(
               icon: const Icon(Icons.person),
               onPressed: () {
-                if (friendUserId == null || friendUserId.isEmpty) {
+                if (friendUserId == null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Unable to open chat for this user')),
+                  );
+                  return;
+                }
+                if (friendUserId.isEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Unable to open chat for this user')),
                   );
