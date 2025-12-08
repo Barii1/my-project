@@ -105,16 +105,24 @@ class FriendService {
         }).toList();
       }
 
-      final results = docs.where((d) => d.id != currentUserId).map((doc) {
+      final results = <UserSearchResult>[];
+      final seenUserIds = <String>{};
+      
+      for (var doc in docs) {
+        if (doc.id == currentUserId) continue;
+        if (seenUserIds.contains(doc.id)) continue; // Skip duplicates
+        
+        seenUserIds.add(doc.id);
         final data = doc.data();
         final fullName = (data['fullName'] ?? data['displayName'] ?? data['username'] ?? '').toString();
-        return UserSearchResult(
+        results.add(UserSearchResult(
           userId: doc.id,
           fullName: fullName,
           email: data['email'] ?? '',
-        );
-      }).toList();
+        ));
+      }
       
+      print('📊 Deduplicated results: ${results.length} unique users');
       return results;
     } catch (e) {
       return [];
@@ -155,6 +163,7 @@ class FriendService {
       print('📊 Firestore searchName query returned ${snapshot.docs.length} documents');
 
       final results = <UserSearchResult>[];
+      final seenUserIds = <String>{};
       
       // If no results, try searching all users and filter client-side
       if (snapshot.docs.isEmpty) {
@@ -169,6 +178,13 @@ class FriendService {
             print('  ⏭️ Skipping current user: ${doc.id}');
             continue;
           }
+          
+          // Skip duplicates
+          if (seenUserIds.contains(doc.id)) {
+            print('  ⚠️ Duplicate userId found: ${doc.id}');
+            continue;
+          }
+          seenUserIds.add(doc.id);
           
           final data = doc.data();
           final fullName = data['fullName'] ?? '';
@@ -204,6 +220,13 @@ class FriendService {
             continue;
           }
           
+          // Skip duplicates
+          if (seenUserIds.contains(doc.id)) {
+            print('  ⚠️ Duplicate userId found: ${doc.id}');
+            continue;
+          }
+          seenUserIds.add(doc.id);
+          
           final data = doc.data();
           final fullName = data['fullName'] ?? '';
           print('  ✅ Found: $fullName (${data["email"]})');
@@ -216,12 +239,23 @@ class FriendService {
         }
       }
 
-      print('🎯 Final results: ${results.length} users found');
+      // Deduplicate by userId
+      final uniqueResults = <String, UserSearchResult>{};
       for (var user in results) {
-        print('  - ${user.fullName} (${user.email})');
+        if (!uniqueResults.containsKey(user.userId)) {
+          uniqueResults[user.userId] = user;
+        } else {
+          print('  ⚠️ Duplicate user found: ${user.fullName} (${user.userId})');
+        }
       }
       
-      return results;
+      final finalResults = uniqueResults.values.toList();
+      print('🎯 Final results: ${finalResults.length} unique users (${results.length} before deduplication)');
+      for (var user in finalResults) {
+        print('  - ${user.fullName} (${user.email}) - ID: ${user.userId}');
+      }
+      
+      return finalResults;
     } catch (e, stackTrace) {
       print('❌ Error searching users: $e');
       print('📜 Stack trace: $stackTrace');
@@ -246,6 +280,9 @@ class FriendService {
       print('📊 Firestore returned ${snapshot.docs.length} documents');
       
       final results = <UserSearchResult>[];
+      final seenUserIds = <String>{};
+      final seenEmails = <String>{};
+      
       for (var doc in snapshot.docs) {
         if (doc.id == currentUserId) {
           print('  ⏭️ Skipping current user');
@@ -256,7 +293,24 @@ class FriendService {
         final fullName = data['fullName'] ?? 'Unknown';
         final email = data['email'] ?? 'No email';
         
-        print('  👤 Found user: $fullName ($email)');
+        // Skip if we've already seen this userId
+        if (seenUserIds.contains(doc.id)) {
+          print('  ⚠️ Duplicate userId found: $fullName (${doc.id})');
+          continue;
+        }
+        
+        // Skip if we've already seen this email (same email, different account)
+        if (email != 'No email' && seenEmails.contains(email.toLowerCase())) {
+          print('  ⚠️ Duplicate email found: $fullName ($email) - ID: ${doc.id}');
+          continue;
+        }
+        
+        seenUserIds.add(doc.id);
+        if (email != 'No email') {
+          seenEmails.add(email.toLowerCase());
+        }
+        
+        print('  👤 Found user: $fullName ($email) - ID: ${doc.id}');
         
         results.add(UserSearchResult(
           userId: doc.id,
@@ -265,7 +319,7 @@ class FriendService {
         ));
       }
       
-      print('✅ Total users retrieved: ${results.length}');
+      print('✅ Total unique users retrieved: ${results.length} (from ${snapshot.docs.length} documents)');
       return results;
     } catch (e, stackTrace) {
       print('❌ Error getting all users: $e');
@@ -280,41 +334,90 @@ class FriendService {
     required String toUserName,
   }) async {
     final currentUserId = _currentUserId;
-    final currentUserName = _auth.currentUser?.displayName ?? 'User';
     
-    if (currentUserId == null) return false;
-    if (currentUserId == toUserId) return false; // Can't friend yourself
+    if (currentUserId == null) {
+      print('❌ Cannot send friend request: User not authenticated');
+      return false;
+    }
+    
+    if (currentUserId == toUserId) {
+      print('❌ Cannot send friend request: Cannot friend yourself');
+      return false; // Can't friend yourself
+    }
 
     try {
-      // Check if already friends
-      final friendDoc = await _firestore
-          .collection('users')
-          .doc(currentUserId)
-          .collection('friends')
-          .doc(toUserId)
-          .get();
+      // Get current user's name from Firestore (with fallback if permission denied)
+      String currentUserName = 'User';
+      try {
+        final currentUserDoc = await _firestore
+            .collection('users')
+            .doc(currentUserId)
+            .get();
+        
+        if (currentUserDoc.exists) {
+          currentUserName = currentUserDoc.data()?['fullName'] ?? 
+                            _auth.currentUser?.displayName ?? 
+                            _auth.currentUser?.email?.split('@').first ?? 
+                            'User';
+        } else {
+          currentUserName = _auth.currentUser?.displayName ?? 
+                           _auth.currentUser?.email?.split('@').first ?? 
+                           'User';
+        }
+      } catch (e) {
+        print('⚠️ Could not read user document (permission issue), using fallback name');
+        currentUserName = _auth.currentUser?.displayName ?? 
+                         _auth.currentUser?.email?.split('@').first ?? 
+                         'User';
+      }
       
-      if (friendDoc.exists) {
-        print('Already friends with this user');
+      print('📤 Sending friend request from $currentUserName ($currentUserId) to $toUserName ($toUserId)');
+
+      // Check if already friends (with error handling)
+      bool alreadyFriends = false;
+      try {
+        final friendDoc = await _firestore
+            .collection('users')
+            .doc(currentUserId)
+            .collection('friends')
+            .doc(toUserId)
+            .get();
+        
+        alreadyFriends = friendDoc.exists;
+      } catch (e) {
+        print('⚠️ Could not check friends status (permission issue), continuing...');
+      }
+      
+      if (alreadyFriends) {
+        print('⚠️ Already friends with this user');
         return false;
       }
 
-      // Check if request already sent
-      final existingRequest = await _firestore
-          .collection('users')
-          .doc(currentUserId)
-          .collection('friendRequests')
-          .doc('sent')
-          .collection('requests')
-          .doc(toUserId)
-          .get();
-      
-      if (existingRequest.exists) {
-        final status = existingRequest.data()?['status'];
-        if (status == 'pending') {
-          print('Friend request already sent');
-          return false;
+      // Check if request already sent (with error handling)
+      bool requestExists = false;
+      try {
+        final existingRequest = await _firestore
+            .collection('users')
+            .doc(currentUserId)
+            .collection('friendRequests')
+            .doc('sent')
+            .collection('requests')
+            .doc(toUserId)
+            .get();
+        
+        if (existingRequest.exists) {
+          final status = existingRequest.data()?['status'];
+          if (status == 'pending') {
+            requestExists = true;
+          }
         }
+      } catch (e) {
+        print('⚠️ Could not check existing request (permission issue), continuing...');
+      }
+      
+      if (requestExists) {
+        print('⚠️ Friend request already sent (pending)');
+        return false;
       }
 
       final batch = _firestore.batch();
@@ -354,10 +457,11 @@ class FriendService {
       );
 
       await batch.commit();
-      print('Friend request sent successfully');
+      print('✅ Friend request sent successfully');
       return true;
-    } catch (e) {
-      print('Error sending friend request: $e');
+    } catch (e, stackTrace) {
+      print('❌ Error sending friend request: $e');
+      print('📜 Stack trace: $stackTrace');
       return false;
     }
   }
@@ -368,9 +472,38 @@ class FriendService {
     required String fromUserName,
   }) async {
     final currentUserId = _currentUserId;
-    final currentUserName = _auth.currentUser?.displayName ?? 'User';
     
-    if (currentUserId == null) return false;
+    if (currentUserId == null) {
+      print('❌ Cannot accept friend request: User not authenticated');
+      return false;
+    }
+    
+    // Get current user's name from Firestore (with fallback if permission denied)
+    String currentUserName = 'User';
+    try {
+      final currentUserDoc = await _firestore
+          .collection('users')
+          .doc(currentUserId)
+          .get();
+      
+      if (currentUserDoc.exists) {
+        currentUserName = currentUserDoc.data()?['fullName'] ?? 
+                          _auth.currentUser?.displayName ?? 
+                          _auth.currentUser?.email?.split('@').first ?? 
+                          'User';
+      } else {
+        currentUserName = _auth.currentUser?.displayName ?? 
+                         _auth.currentUser?.email?.split('@').first ?? 
+                         'User';
+      }
+    } catch (e) {
+      print('⚠️ Could not read user document (permission issue), using fallback name');
+      currentUserName = _auth.currentUser?.displayName ?? 
+                           _auth.currentUser?.email?.split('@').first ?? 
+                           'User';
+    }
+    
+    print('✅ Accepting friend request from $fromUserName ($fromUserId)');
 
     try {
       final batch = _firestore.batch();

@@ -139,29 +139,44 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
   }
 
   Future<void> _sendFriendRequest(UserSearchResult user) async {
-    final success = await _friendService.sendFriendRequest(
-      toUserId: user.userId,
-      toUserName: user.fullName,
-    );
+    try {
+      print('📤 Attempting to send friend request to ${user.fullName} (${user.userId})');
+      final success = await _friendService.sendFriendRequest(
+        toUserId: user.userId,
+        toUserName: user.fullName,
+      );
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    if (success) {
-      setState(() {
-        _requestStatusCache[user.userId] = 'pending';
-      });
-      
+      if (success) {
+        setState(() {
+          _requestStatusCache[user.userId] = 'pending';
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Friend request sent to ${user.fullName}'),
+            backgroundColor: const Color(0xFF4DB8A8),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to send friend request. Check console for details.'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      print('❌ Exception sending friend request: $e');
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Friend request sent to ${user.fullName}'),
-          backgroundColor: const Color(0xFF4DB8A8),
-        ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to send friend request'),
+          content: Text('Error: ${e.toString()}'),
           backgroundColor: Colors.red,
+          duration: const Duration(seconds: 4),
         ),
       );
     }

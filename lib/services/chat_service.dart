@@ -86,16 +86,8 @@ class ChatService {
     required String friendUserId,
     required String friendName,
   }) {
-    // Check if this is a demo friend
-    if (friendName == 'Sara Hameed' || 
-        friendName == 'Fahad Saeed' || 
-        friendName == 'Alina Tariq' ||
-        friendName == 'Ali Ahmed' ||
-        friendName == 'Zainab Hussain') {
-      return Stream.value(_getDemoMessages(friendName));
-    }
-    
     final chatId = _generateChatId(currentUserId, friendUserId);
+    print('💬 Getting messages stream for chat: $chatId');
 
     return _firestore
         .collection('chats')
@@ -118,69 +110,6 @@ class ChatService {
     });
   }
   
-  // Demo messages for demo friends
-  List<ChatMessage> _getDemoMessages(String friendName) {
-    final now = DateTime.now();
-    
-    if (friendName == 'Sara Hameed') {
-      return [
-        ChatMessage(
-          id: 'demo1',
-          sender: 'Sara Hameed',
-          senderId: 'demo_friend_1',
-          text: 'Hey! Want to study together for the CS quiz?',
-          timestamp: now.subtract(const Duration(hours: 2)),
-          read: false,
-        ),
-      ];
-    } else if (friendName == 'Fahad Saeed') {
-      return [
-        ChatMessage(
-          id: 'demo2',
-          sender: 'Fahad Saeed',
-          senderId: 'demo_friend_2',
-          text: 'Did you complete today\'s quiz yet?',
-          timestamp: now.subtract(const Duration(hours: 5)),
-          read: false,
-        ),
-      ];
-    } else if (friendName == 'Alina Tariq') {
-      return [
-        ChatMessage(
-          id: 'demo3',
-          sender: 'Alina Tariq',
-          senderId: 'demo_friend_3',
-          text: 'Can you help me with the Biology questions?',
-          timestamp: now.subtract(const Duration(hours: 3)),
-          read: false,
-        ),
-      ];
-    } else if (friendName == 'Ali Ahmed') {
-      return [
-        ChatMessage(
-          id: 'demo4',
-          sender: 'Ali Ahmed',
-          senderId: 'demo_friend_4',
-          text: 'Let\'s compete on the leaderboard this week',
-          timestamp: now.subtract(const Duration(hours: 6)),
-          read: false,
-        ),
-      ];
-    } else if (friendName == 'Zainab Hussain') {
-      return [
-        ChatMessage(
-          id: 'demo5',
-          sender: 'Zainab Hussain',
-          senderId: 'demo_friend_5',
-          text: 'Are you free to study Pakistan Studies together?',
-          timestamp: now.subtract(const Duration(hours: 4)),
-          read: false,
-        ),
-      ];
-    }
-    
-    return [];
-  }
 
   /// Mark messages as read
   Future<void> markMessagesAsRead({
