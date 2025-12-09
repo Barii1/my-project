@@ -273,7 +273,9 @@ $extracted''';
         finalPrompt = 'Context: ${widget.course}\n\nQuestion: $text';
       }
 
-      final reply = await GroqChatService.sendMessage(finalPrompt);
+      // Use educational-only variant so answers remain focused on
+      // course-related learning and refuse clearly non-educational topics.
+      final reply = await GroqChatService.sendEducationalMessage(finalPrompt);
       
       if (!mounted) return;
       setState(() {

@@ -100,7 +100,7 @@ class _AppUsageScreenState extends State<AppUsageScreen> with WidgetsBindingObse
                   final mins = data.perDayMinutes[i];
                   return ListTile(
                     title: Text(data.labels[i]),
-                    trailing: Text('${mins} min'),
+                    trailing: Text('$mins min'),
                   );
                 }),
               ],
@@ -127,7 +127,7 @@ class _TotalChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final hours = minutes ~/ 60;
     final mins = minutes % 60;
-    final text = hours > 0 ? '${hours}h ${mins}m' : '${mins} min';
+    final text = hours > 0 ? '${hours}h ${mins}m' : '$mins min';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(color: const Color(0xFF10B981).withOpacity(0.1), borderRadius: BorderRadius.circular(12)),

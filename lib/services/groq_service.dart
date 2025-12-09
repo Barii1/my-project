@@ -15,6 +15,19 @@ class GroqChatService {
     'gpt-3.5-turbo',
   ];
 
+  /// System prompt that restricts the assistant to educational topics only.
+  /// If a question is not clearly about learning or education, the model
+  /// should politely refuse instead of answering normally.
+  static const String educationalSystemPrompt = '''You are Muallim, an educational assistant.
+Your sole purpose is to help with learning: explaining academic concepts, homework, exams, study skills, career guidance related to learning, and similar educational topics.
+
+Rules:
+- If the user asks about something that is clearly not educational (for example: general chit-chat, gossip, politics, celebrity news, relationships, finance, health advice, or other life topics that are not about learning a subject or skill), you MUST refuse.
+- When you refuse, respond briefly and politely, e.g. "I'm designed to help with educational questions only. Please ask me about something you want to learn."
+- If the question can reasonably be interpreted as learning about a topic (e.g. "How does a V8 engine work?"), you MAY answer and treat it as an educational question.
+- Never provide NSFW, hateful, violent, or illegal guidance. If asked, refuse and redirect to safe educational topics instead.
+''';
+
   /// Sends a single-turn user prompt and returns the assistant reply.
   static Future<String> sendMessage(String userMessage, {String? systemPrompt, String? model, int maxTokens = 512, double temperature = 0.7}) async {
     final chosenModel = model ?? _defaultModel;
@@ -44,6 +57,29 @@ class GroqChatService {
       'stream': false,
     }, chosenModel);
     return resp;
+  }
+
+  /// Convenience wrapper: multi-turn conversation that is explicitly
+  /// restricted to educational topics using [educationalSystemPrompt].
+  ///
+  /// Call this instead of [sendConversation] when you want the chatbot to
+  /// answer only educational questions and politely refuse others.
+  static Future<String> sendEducationalConversation(
+    List<Map<String, String>> history, {
+    String? model,
+    int maxTokens = 512,
+    double temperature = 0.7,
+  }) {
+    final fullHistory = <Map<String, String>>[
+      {'role': 'system', 'content': educationalSystemPrompt},
+      ...history,
+    ];
+    return sendConversation(
+      fullHistory,
+      model: model,
+      maxTokens: maxTokens,
+      temperature: temperature,
+    );
   }
 
   /// Document Q&A helper: provide extracted text + a question.
@@ -108,6 +144,23 @@ Provide a clear, well-structured summary:''';
       systemPrompt: 'You are a helpful assistant that creates concise, accurate summaries. Focus on extracting key information and main ideas.',
       maxTokens: (maxLength * 2).clamp(100, 800),
       temperature: 0.5,
+    );
+  }
+
+  /// Single-turn educational helper: applies [educationalSystemPrompt]
+  /// so that answers stay within learning/education topics.
+  static Future<String> sendEducationalMessage(
+    String userMessage, {
+    String? model,
+    int maxTokens = 512,
+    double temperature = 0.7,
+  }) {
+    return sendMessage(
+      userMessage,
+      systemPrompt: educationalSystemPrompt,
+      model: model,
+      maxTokens: maxTokens,
+      temperature: temperature,
     );
   }
 

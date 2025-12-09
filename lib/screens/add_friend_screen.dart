@@ -13,8 +13,8 @@ class _AddFriendScreenState extends State<AddFriendScreen> {
   final FriendService _friendService = FriendService();
   
   List<UserSearchResult> _searchResults = [];
-  Map<String, bool> _isFriendCache = {};
-  Map<String, String?> _requestStatusCache = {};
+  final Map<String, bool> _isFriendCache = {};
+  final Map<String, String?> _requestStatusCache = {};
   bool _isSearching = false;
   String _query = '';
 

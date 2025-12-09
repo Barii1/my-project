@@ -578,7 +578,7 @@ class _HomeScreenV3State extends State<HomeScreenV3> with WidgetsBindingObserver
                       onTap: () {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text('${days[index]}: ' + _formatMinutesLabel(valueMin.round())),
+                            content: Text('${days[index]}: ${_formatMinutesLabel(valueMin.round())}'),
                             duration: const Duration(seconds: 1),
                             behavior: SnackBarBehavior.floating,
                           ),

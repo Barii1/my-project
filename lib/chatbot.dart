@@ -155,7 +155,9 @@ class _ChatPageState extends State<ChatPage> with TickerProviderStateMixin {
       final history = _messages
           .map((m) => {'role': m.isUser ? 'user' : 'assistant', 'content': m.content})
           .toList();
-      final reply = await GroqChatService.sendConversation(history);
+      // Use educational-only variant so Muallim answers only learning
+      // related questions and politely refuses off-topic queries.
+      final reply = await GroqChatService.sendEducationalConversation(history);
       
       if (mounted) {
         setState(() {
